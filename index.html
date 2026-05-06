@@ -1438,6 +1438,14 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
     <div class="settings-row">
 
+      <div><div class="sr-label">Bestätigung vor neuer Runde</div><div class="sr-desc">Fragt ob alle Ergebnisse stimmen bevor eine neue Runde generiert wird</div></div>
+
+      <label class="toggle-sw"><input type="checkbox" id="confirmNextRound" checked onchange="confirmNextRoundSetting=this.checked"><span class="toggle-track"></span></label>
+
+    </div>
+
+    <div class="settings-row">
+
       <div><div class="sr-label">Turnier zurücksetzen</div><div class="sr-desc">Alle Runden und Ergebnisse löschen — Teams bleiben</div></div>
 
       <button class="btn-danger" id="resetTournamentBtn" onclick="resetTournament()">Zurücksetzen</button>
@@ -1583,6 +1591,8 @@ let tournamentFinished=false,guiScale=3;
 // Endspurt state
 
 let endspurtActive=false;
+
+let confirmNextRoundSetting=true;
 
 let endspurtTarget=0;
 
@@ -3692,7 +3702,7 @@ function nextRoundAction(){
 
   if(endspurtActive){return;}
 
-  if(!confirm('Stimmen alle Ergebnisse der aktuellen Runde?\n\nNächste Runde wird generiert.')){return;}
+  if(confirmNextRoundSetting&&!confirm('Stimmen alle Ergebnisse der aktuellen Runde?\n\nNächste Runde wird generiert.')){return;}
 
   generateRound(false);
 
