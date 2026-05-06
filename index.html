@@ -5027,9 +5027,15 @@ async function joinAsAdmin(code){
 
     const data=snap.val()||{};
 
+    stopUserSync();
+
+    clearInterval(timerInterval);timerInterval=null;timerRunning=false;
+
     sessionId=code;sessionName=sess.name;sessionPassword=data.pw||'';
 
     if(data.state)loadSessionState(data.state);
+
+    applyTimerState(data.timer);
 
     await registerParticipant(code,'admin');
 
@@ -5222,9 +5228,15 @@ async function rejoinAsAdmin(code){
 
     const data=snap.val()||{};
 
+    stopUserSync();
+
+    clearInterval(timerInterval);timerInterval=null;timerRunning=false;
+
     sessionId=code;sessionName=sess.name;sessionPassword=data.pw||'';
 
     if(data.state)loadSessionState(data.state);
+
+    applyTimerState(data.timer);
 
     await registerParticipant(code,'admin');
 
@@ -5436,9 +5448,15 @@ async function confirmJoinSession(){
 
     }
 
+    stopUserSync();
+
+    clearInterval(timerInterval);timerInterval=null;timerRunning=false;
+
     sessionId=selectedJoinId;sessionName=sess.name;
 
     if(data.state){loadSessionState(data.state);}
+
+    applyTimerState(data.timer);
 
     await registerParticipant(selectedJoinId,'user');
 
@@ -5567,6 +5585,8 @@ function leaveSession(){
   if(setupTab)setupTab.style.display='';
 
   stopUserSync();
+
+  clearInterval(timerInterval);timerInterval=null;timerRunning=false;drawTimer();
 
   document.getElementById('sessionStartScreen').style.display='flex';
 
