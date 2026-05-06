@@ -5528,7 +5528,7 @@ function applyRole(role){
 
   const resetBtn=document.getElementById('resetTournamentBtn');
 
-  if(resetBtn)resetBtn.style.display=isAdmin?'':'none';
+  if(resetBtn){resetBtn.textContent=isAdmin?'Zurücksetzen':'Funktion nicht verfügbar';resetBtn.disabled=!isAdmin;resetBtn.style.display='';}
 
   if(isUser){
 
