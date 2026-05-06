@@ -742,41 +742,17 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
     <div class="sess-sub">Faustball Turnier Manager <span class="beta-badge">BETA</span></div>
 
-    <div class="sess-tabs">
+    <div id="auth-google-err" style="display:none;margin:12px 0" class="alert alert-danger"></div>
 
-      <button class="sess-tab active" id="atab-anmelden" onclick="switchAuthTab('anmelden')">Anmelden</button>
+    <button onclick="signInWithGoogle()" style="width:100%;padding:14px;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:12px;background:#fff;color:#3c4043;border:1px solid #dadce0;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:500;cursor:pointer;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 1px 3px rgba(0,0,0,.2)'" onmouseout="this.style.boxShadow='none'">
 
-      <button class="sess-tab" id="atab-registrieren" onclick="switchAuthTab('registrieren')">Registrieren</button>
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
 
-    </div>
+      Mit Google anmelden
 
-    <div id="acont-anmelden" class="sess-content active">
+    </button>
 
-      <input type="email" id="auth-email" class="sess-inp" placeholder="E-Mail" onkeydown="if(event.key==='Enter')loginUser()">
-
-      <input type="password" id="auth-pw" class="sess-inp" placeholder="Passwort" onkeydown="if(event.key==='Enter')loginUser()">
-
-      <div id="auth-login-err" style="display:none" class="alert alert-danger"></div>
-
-      <button class="btn-primary" style="width:100%;padding:13px" onclick="loginUser()">Anmelden</button>
-
-    </div>
-
-    <div id="acont-registrieren" class="sess-content">
-
-      <input type="text" id="auth-reg-name" class="sess-inp" placeholder="Benutzername">
-
-      <input type="email" id="auth-reg-email" class="sess-inp" placeholder="E-Mail">
-
-      <input type="password" id="auth-reg-pw" class="sess-inp" placeholder="Passwort (min. 6 Zeichen)">
-
-      <input type="password" id="auth-reg-pw2" class="sess-inp" placeholder="Passwort bestätigen" onkeydown="if(event.key==='Enter')registerUser()">
-
-      <div id="auth-reg-err" style="display:none" class="alert alert-danger"></div>
-
-      <button class="btn-primary" style="width:100%;padding:13px" onclick="registerUser()">Registrieren</button>
-
-    </div>
+    <div style="margin-top:10px;font-size:.72rem;color:var(--muted);text-align:center">Jede Google-E-Mail kann nur einmal verwendet werden</div>
 
   </div>
 
@@ -874,17 +850,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
  
 
-      <div style="font-size:.7rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Passwort ändern</div>
-
-      <input type="password" id="set-cur-pw" class="sess-inp" placeholder="Aktuelles Passwort">
-
-      <input type="password" id="set-new-pw" class="sess-inp" placeholder="Neues Passwort (min. 6 Zeichen)">
-
-      <input type="password" id="set-new-pw2" class="sess-inp" placeholder="Neues Passwort bestätigen">
-
-      <div id="set-pw-msg" style="display:none;font-size:.8rem;margin-bottom:8px"></div>
-
-      <button class="btn-primary" style="width:100%;padding:11px" onclick="changePassword()">Passwort speichern</button>
+      <div style="font-size:.72rem;color:var(--muted);margin-top:4px">Passwort wird über Google verwaltet.</div>
 
     </div>
 
@@ -1516,7 +1482,11 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
 </div>
 
- 
+
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
 
@@ -4698,105 +4668,74 @@ function applyStartedLock(){
 
 /* ============================================================
 
-   USER AUTH
+   FIREBASE + USER AUTH
 
 ============================================================ */
 
-function getUsers(){try{return JSON.parse(localStorage.getItem('fb_users')||'[]');}catch{return[];}}
+const firebaseConfig={
+  apiKey:"AIzaSyDwsEeAFfRG7G7FAgcmKXo9PiQ5xbIFbrY",
+  authDomain:"faustball-turnier.firebaseapp.com",
+  projectId:"faustball-turnier",
+  storageBucket:"faustball-turnier.firebasestorage.app",
+  messagingSenderId:"521276825480",
+  appId:"1:521276825480:web:faed7515ce7399589f643d",
+  // Falls die Datenbank-URL nicht stimmt: Firebase Console → Realtime Database → URL kopieren
+  databaseURL:"https://faustball-turnier-default-rtdb.europe-west1.firebasedatabase.app"
+};
+firebase.initializeApp(firebaseConfig);
+const fbAuth=firebase.auth();
+const fbDb=firebase.database();
 
-function saveUsers(list){try{localStorage.setItem('fb_users',JSON.stringify(list));}catch{}}
+function emailToKey(e){return(e||'').replace(/\./g,',').replace(/@/g,'_at_');}
+function keyToEmail(k){return(k||'').replace(/,/g,'.').replace(/_at_/g,'@');}
 
-function getCurrentUser(){try{return JSON.parse(sessionStorage.getItem('fb_current_user')||'null');}catch{return null;}}
+async function signInWithGoogle(){
+  const errEl=document.getElementById('auth-google-err');
+  errEl.style.display='none';
+  try{
+    const provider=new firebase.auth.GoogleAuthProvider();
+    await fbAuth.signInWithPopup(provider);
+  }catch(e){
+    errEl.textContent='Google-Anmeldung fehlgeschlagen: '+e.message;
+    errEl.style.display='block';
+  }
+}
 
-function setCurrentUser(u){try{sessionStorage.setItem('fb_current_user',JSON.stringify(u));}catch{}}
+fbAuth.onAuthStateChanged(async firebaseUser=>{
+  if(firebaseUser){
+    const role=firebaseUser.email===SUPERADMIN_EMAIL?'superadmin':'user';
+    const key=emailToKey(firebaseUser.email);
+    const snap=await fbDb.ref('users/'+key).once('value');
+    let userData=snap.val();
+    if(!userData){
+      userData={email:firebaseUser.email,username:firebaseUser.displayName||firebaseUser.email.split('@')[0],role,createdAt:Date.now()};
+      await fbDb.ref('users/'+key).set(userData);
+    }
+    if(firebaseUser.email===SUPERADMIN_EMAIL&&userData.role!=='superadmin'){
+      userData.role='superadmin';
+      await fbDb.ref('users/'+key+'/role').set('superadmin');
+    }
+    const cu={email:userData.email,username:userData.username,role:userData.role};
+    currentUser=cu;
+    initSessionsListener();
+    onAuthSuccess(cu);
+  }else{
+    currentUser=null;
+    stopSessionsListener();
+    document.getElementById('authScreen').style.display='flex';
+    document.getElementById('sessionStartScreen').style.display='none';
+  }
+});
 
-function clearCurrentUser(){try{sessionStorage.removeItem('fb_current_user');}catch{}}
-
+function getUsers(){return[];}
+function saveUsers(list){}
+function getCurrentUser(){return currentUser;}
+function setCurrentUser(u){currentUser=u;}
+function clearCurrentUser(){}
 function hashPw(pw){let h=5381;for(let i=0;i<pw.length;i++)h=((h<<5)+h)^pw.charCodeAt(i);return(h>>>0).toString(16);}
-
- 
-
-function switchAuthTab(tab){
-
-  ['anmelden','registrieren'].forEach(t=>{
-
-    document.getElementById('atab-'+t).classList.toggle('active',t===tab);
-
-    document.getElementById('acont-'+t).classList.toggle('active',t===tab);
-
-  });
-
-}
-
- 
-
-function registerUser(){
-
-  const name=(document.getElementById('auth-reg-name').value||'').trim();
-
-  const email=(document.getElementById('auth-reg-email').value||'').trim().toLowerCase();
-
-  const pw=document.getElementById('auth-reg-pw').value||'';
-
-  const pw2=document.getElementById('auth-reg-pw2').value||'';
-
-  const errEl=document.getElementById('auth-reg-err');
-
-  errEl.style.display='none';
-
-  if(!name){errEl.textContent='Bitte Benutzernamen eingeben.';errEl.style.display='block';return;}
-
-  if(!email||!email.includes('@')){errEl.textContent='Bitte gültige E-Mail eingeben.';errEl.style.display='block';return;}
-
-  if(pw.length<6){errEl.textContent='Passwort muss mindestens 6 Zeichen haben.';errEl.style.display='block';return;}
-
-  if(pw!==pw2){errEl.textContent='Passwörter stimmen nicht überein.';errEl.style.display='block';return;}
-
-  const users=getUsers();
-
-  if(users.find(u=>u.email===email)){errEl.textContent='Diese E-Mail ist bereits registriert.';errEl.style.display='block';return;}
-
-  const role=email===SUPERADMIN_EMAIL?'superadmin':'user';
-
-  users.push({email,username:name,passwordHash:hashPw(pw),role,createdAt:Date.now()});
-
-  saveUsers(users);
-
-  const cu={email,username:name,role};
-
-  setCurrentUser(cu);
-
-  onAuthSuccess(cu);
-
-}
-
- 
-
+function switchAuthTab(tab){}
+function registerUser(){}
 function loginUser(){
-
-  const email=(document.getElementById('auth-email').value||'').trim().toLowerCase();
-
-  const pw=document.getElementById('auth-pw').value||'';
-
-  const errEl=document.getElementById('auth-login-err');
-
-  errEl.style.display='none';
-
-  if(!email||!pw){errEl.textContent='Bitte E-Mail und Passwort eingeben.';errEl.style.display='block';return;}
-
-  const users=getUsers();
-
-  const u=users.find(x=>x.email===email);
-
-  if(!u||u.passwordHash!==hashPw(pw)){errEl.textContent='Falsche E-Mail oder Passwort.';errEl.style.display='block';return;}
-
-  if(email===SUPERADMIN_EMAIL&&u.role!=='superadmin'){u.role='superadmin';saveUsers(users);}
-
-  const cu={email:u.email,username:u.username,role:u.role};
-
-  setCurrentUser(cu);
-
-  onAuthSuccess(cu);
 
 }
 
@@ -4862,15 +4801,7 @@ function logoutUser(){
 
   }
 
-  currentUser=null;clearCurrentUser();
-
-  document.getElementById('userInfoBadge').style.display='none';
-
-  document.getElementById('logoutBtn').style.display='none';
-
-  document.getElementById('sessionStartScreen').style.display='none';
-
-  document.getElementById('authScreen').style.display='flex';
+  fbAuth.signOut();
 
 }
 
@@ -4882,11 +4813,7 @@ function initSettingsTab(){
 
   if(inp&&currentUser)inp.value=currentUser.username;
 
-  document.getElementById('set-name-msg').style.display='none';
-
-  document.getElementById('set-pw-msg').style.display='none';
-
-  ['set-cur-pw','set-new-pw','set-new-pw2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const nameMsg=document.getElementById('set-name-msg');if(nameMsg)nameMsg.style.display='none';
 
 }
 
@@ -4904,7 +4831,7 @@ function showSettingsMsg(elId,text,ok){
 
 }
 
-function changeUsername(){
+async function changeUsername(){
 
   const name=(document.getElementById('set-new-name').value||'').trim();
 
@@ -4912,19 +4839,9 @@ function changeUsername(){
 
   if(!currentUser){showSettingsMsg('set-name-msg','Nicht angemeldet.',false);return;}
 
-  const users=getUsers();
-
-  const u=users.find(x=>x.email===currentUser.email);
-
-  if(!u){showSettingsMsg('set-name-msg','Benutzer nicht gefunden.',false);return;}
-
-  u.username=name;
-
-  saveUsers(users);
+  await fbDb.ref('users/'+emailToKey(currentUser.email)+'/username').set(name);
 
   currentUser.username=name;
-
-  setCurrentUser(currentUser);
 
   const nameEl=document.getElementById('currentUserName');
 
@@ -4938,37 +4855,7 @@ function changeUsername(){
 
 }
 
-function changePassword(){
-
-  const curPw=document.getElementById('set-cur-pw').value||'';
-
-  const newPw=document.getElementById('set-new-pw').value||'';
-
-  const newPw2=document.getElementById('set-new-pw2').value||'';
-
-  if(!currentUser){showSettingsMsg('set-pw-msg','Nicht angemeldet.',false);return;}
-
-  const users=getUsers();
-
-  const u=users.find(x=>x.email===currentUser.email);
-
-  if(!u){showSettingsMsg('set-pw-msg','Benutzer nicht gefunden.',false);return;}
-
-  if(u.passwordHash!==hashPw(curPw)){showSettingsMsg('set-pw-msg','Aktuelles Passwort falsch.',false);return;}
-
-  if(newPw.length<6){showSettingsMsg('set-pw-msg','Neues Passwort muss min. 6 Zeichen haben.',false);return;}
-
-  if(newPw!==newPw2){showSettingsMsg('set-pw-msg','Passwörter stimmen nicht überein.',false);return;}
-
-  u.passwordHash=hashPw(newPw);
-
-  saveUsers(users);
-
-  ['set-cur-pw','set-new-pw','set-new-pw2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-
-  showSettingsMsg('set-pw-msg','Passwort erfolgreich geändert.',true);
-
-}
+function changePassword(){}
 
 function renderAdminSessList(){
 
@@ -5026,17 +4913,19 @@ function renderAdminSessList(){
 
 }
 
-function renderAdminUsersList(){
+async function renderAdminUsersList(){
 
   const el=document.getElementById('admin-users-list');
 
   if(!el)return;
 
-  const users=getUsers();
+  const snap=await fbDb.ref('users').once('value');
+
+  const usersObj=snap.val()||{};
 
   const myEmail=currentUser?.email||'';
 
-  const others=users.filter(u=>u.email!==myEmail&&u.role!=='superadmin');
+  const others=Object.values(usersObj).filter(u=>u.email!==myEmail&&u.role!=='superadmin');
 
   if(!others.length){el.innerHTML='<div style="color:var(--muted);font-size:.85rem;padding:6px 0">Keine anderen Nutzer vorhanden.</div>';return;}
 
@@ -5074,25 +4963,17 @@ function renderAdminUsersList(){
 
 }
 
-function setSystemUserRole(email,role){
+async function setSystemUserRole(email,role){
 
   if(currentUser?.role!=='superadmin')return;
 
-  const users=getUsers();
-
-  const u=users.find(x=>x.email===email);
-
-  if(!u)return;
-
-  u.role=role;
-
-  saveUsers(users);
+  await fbDb.ref('users/'+emailToKey(email)+'/role').set(role);
 
   renderAdminUsersList();
 
 }
 
-function joinAsAdmin(code){
+async function joinAsAdmin(code){
 
   const allSess=getSessions();
 
@@ -5102,13 +4983,15 @@ function joinAsAdmin(code){
 
   try{
 
-    const data=JSON.parse(localStorage.getItem('fb_sess_'+code)||'{}');
+    const snap=await fbDb.ref('session_data/'+code).once('value');
+
+    const data=snap.val()||{};
 
     sessionId=code;sessionName=sess.name;sessionPassword=data.pw||'';
 
     if(data.state)loadSessionState(data.state);
 
-    registerParticipant(code,'admin');
+    await registerParticipant(code,'admin');
 
     applyRole('admin');
 
@@ -5122,45 +5005,29 @@ function joinAsAdmin(code){
 
 }
 
-function registerParticipant(code,role){
+async function registerParticipant(code,role){
 
   if(!currentUser)return;
 
-  try{
+  const key=emailToKey(currentUser.email);
 
-    const data=JSON.parse(localStorage.getItem('fb_sess_'+code)||'{}');
-
-    if(!data.participants)data.participants={};
-
-    data.participants[currentUser.email]={username:currentUser.username,role:role,joinedAt:Date.now()};
-
-    localStorage.setItem('fb_sess_'+code,JSON.stringify(data));
-
-  }catch{}
+  await fbDb.ref('session_data/'+code+'/participants/'+key).set({username:currentUser.username,role,joinedAt:Date.now()});
 
 }
 
-function setParticipantRole(email,role){
+async function setParticipantRole(email,role){
 
   if(userRole!=='admin'||!sessionId)return;
 
-  try{
+  const key=emailToKey(email);
 
-    const data=JSON.parse(localStorage.getItem('fb_sess_'+sessionId)||'{}');
+  await fbDb.ref('session_data/'+sessionId+'/participants/'+key+'/role').set(role);
 
-    if(!data.participants||!data.participants[email])return;
-
-    data.participants[email].role=role;
-
-    localStorage.setItem('fb_sess_'+sessionId,JSON.stringify(data));
-
-    renderParticipants();
-
-  }catch{}
+  renderParticipants();
 
 }
 
-function renderParticipants(){
+async function renderParticipants(){
 
   if(userRole!=='admin'||!sessionId)return;
 
@@ -5168,25 +5035,25 @@ function renderParticipants(){
 
   if(!el)return;
 
-  let data;
+  const snap=await fbDb.ref('session_data/'+sessionId+'/participants').once('value');
 
-  try{data=JSON.parse(localStorage.getItem('fb_sess_'+sessionId)||'{}');}catch{return;}
-
-  const participants=data.participants||{};
+  const participants=snap.val()||{};
 
   const keys=Object.keys(participants);
 
   if(!keys.length){el.innerHTML='<div style="color:var(--muted);font-size:.85rem;padding:6px 0">Noch keine Nutzer verbunden.</div>';return;}
 
-  const myEmail=currentUser?.email||'';
+  const myEmailKey=emailToKey(currentUser?.email||'');
 
   let html='';
 
-  keys.forEach(email=>{
+  keys.forEach(key=>{
 
-    const p=participants[email];
+    const email=keyToEmail(key);
 
-    const isMe=email===myEmail;
+    const p=participants[key];
+
+    const isMe=key===myEmailKey;
 
     const roleLbl=p.role==='admin'?'Admin':p.role==='operator'?'Operator':'Nutzer';
 
@@ -5230,29 +5097,28 @@ function renderParticipants(){
 
 ============================================================ */
 
-function getSessions(){
+// Firebase-backed session cache (updated by real-time listener)
+let _sessionsCache={};
+let _sessionsRef=null;
 
-  try{return JSON.parse(localStorage.getItem('fb_sessions')||'[]');}catch{return[];}
-
+function initSessionsListener(){
+  if(_sessionsRef)return;
+  _sessionsRef=fbDb.ref('sessions');
+  _sessionsRef.on('value',snap=>{
+    _sessionsCache=snap.val()||{};
+    renderSessList();
+    renderMySessionsList();
+    renderAdminSessList();
+  });
 }
 
-function saveSessions(list){
-
-  try{localStorage.setItem('fb_sessions',JSON.stringify(list));}catch{}
-
+function stopSessionsListener(){
+  if(_sessionsRef){_sessionsRef.off();_sessionsRef=null;}
+  _sessionsCache={};
 }
 
-function getMySessionCodes(){
-
-  try{return JSON.parse(localStorage.getItem('fb_my_sessions')||'[]');}catch{return[];}
-
-}
-
-function saveMySessionCodes(list){
-
-  try{localStorage.setItem('fb_my_sessions',JSON.stringify(list));}catch{}
-
-}
+function getSessions(){return Object.values(_sessionsCache);}
+function saveSessions(list){}
 
 function renderMySessionsList(){
 
@@ -5302,7 +5168,7 @@ function renderMySessionsList(){
 
 }
 
-function rejoinAsAdmin(code){
+async function rejoinAsAdmin(code){
 
   const allSess=getSessions();
 
@@ -5312,13 +5178,15 @@ function rejoinAsAdmin(code){
 
   try{
 
-    const data=JSON.parse(localStorage.getItem('fb_sess_'+code)||'{}');
+    const snap=await fbDb.ref('session_data/'+code).once('value');
+
+    const data=snap.val()||{};
 
     sessionId=code;sessionName=sess.name;sessionPassword=data.pw||'';
 
     if(data.state)loadSessionState(data.state);
 
-    registerParticipant(code,'admin');
+    await registerParticipant(code,'admin');
 
     applyRole('admin');
 
@@ -5332,7 +5200,7 @@ function rejoinAsAdmin(code){
 
 }
 
-function deleteSession(code){
+async function deleteSession(code){
 
   const allSess=getSessions();
 
@@ -5340,9 +5208,9 @@ function deleteSession(code){
 
   if(!confirm('Session "'+(sess?sess.name:code)+'" wirklich löschen? Alle verbundenen Nutzer werden getrennt.'))return;
 
-  saveSessions(allSess.filter(s=>s.id!==code));
+  await fbDb.ref('sessions/'+code).remove();
 
-  try{localStorage.removeItem('fb_sess_'+code);}catch{}
+  await fbDb.ref('session_data/'+code).remove();
 
   if(sessionId===code){
 
@@ -5412,7 +5280,7 @@ function toggleSessCreatePw(){
 
  
 
-function createSession(){
+async function createSession(){
 
   const name=(document.getElementById('sess-name-inp').value||'').trim();
 
@@ -5430,13 +5298,9 @@ function createSession(){
 
   const code=genCode();
 
-  const sessions=getSessions();
+  await fbDb.ref('sessions/'+code).set({id:code,name,hasPw,createdAt:Date.now(),creatorEmail:currentUser?.email||''});
 
-  sessions.push({id:code,name,hasPw:hasPw,createdAt:Date.now(),creatorEmail:currentUser?.email||''});
-
-  saveSessions(sessions);
-
-  try{localStorage.setItem('fb_sess_'+code,JSON.stringify({name,pw,state:null,updatedAt:Date.now()}));}catch{}
+  await fbDb.ref('session_data/'+code).set({name,pw,state:null,updatedAt:Date.now()});
 
   sessionId=code;sessionName=name;sessionPassword=pw;
 
@@ -5506,7 +5370,7 @@ function selectSession(id,hasPw){
 
  
 
-function confirmJoinSession(){
+async function confirmJoinSession(){
 
   if(!selectedJoinId)return;
 
@@ -5520,7 +5384,9 @@ function confirmJoinSession(){
 
   try{
 
-    const data=JSON.parse(localStorage.getItem('fb_sess_'+selectedJoinId)||'{}');
+    const snap=await fbDb.ref('session_data/'+selectedJoinId).once('value');
+
+    const data=snap.val()||{};
 
     if(sess.hasPw){
 
@@ -5534,7 +5400,7 @@ function confirmJoinSession(){
 
     if(data.state){loadSessionState(data.state);}
 
-    registerParticipant(selectedJoinId,'user');
+    await registerParticipant(selectedJoinId,'user');
 
     applyRole('user');
 
@@ -5672,33 +5538,25 @@ function saveSessionState(){
 
   if(!sessionId||(userRole!=='admin'&&userRole!=='operator'))return;
 
-  try{
+  const st={
 
-    const st={
+    teams,referees,refMode,numFields,opponentCooldown,
 
-      teams,referees,refMode,numFields,opponentCooldown,
+    gameMode,numGroups,maxConsecutive,scoring,
 
-      gameMode,numGroups,maxConsecutive,scoring,
+    rounds,currentRound,started,
 
-      rounds,currentRound,started,
+    matchHistory,refHistory,teamPlayCount,
 
-      matchHistory,refHistory,teamPlayCount,
+    groups,groupPhase,groupMatches,placementRounds,
 
-      groups,groupPhase,groupMatches,placementRounds,
+    tournamentFinished,endspurtActive,endspurtTarget,
 
-      tournamentFinished,endspurtActive,endspurtTarget,
+    teamIdCounter,slotGlobalCounter
 
-      teamIdCounter,slotGlobalCounter
+  };
 
-    };
-
-    const existing=JSON.parse(localStorage.getItem('fb_sess_'+sessionId)||'{}');
-
-    existing.state=st;existing.updatedAt=Date.now();
-
-    localStorage.setItem('fb_sess_'+sessionId,JSON.stringify(existing));
-
-  }catch(e){}
+  fbDb.ref('session_data/'+sessionId).update({state:st,updatedAt:Date.now()}).catch(()=>{});
 
 }
 
@@ -5758,81 +5616,45 @@ function refreshAllViews(){
 
  
 
-let _syncInterval=null;
+let _userSyncRef=null;
 
 function startUserSync(){
 
-  window.addEventListener('storage',onStorageChange);
+  if(!sessionId)return;
 
-  _syncInterval=setInterval(()=>{
+  _userSyncRef=fbDb.ref('session_data/'+sessionId);
+
+  _userSyncRef.on('value',snap=>{
 
     if(!sessionId||userRole!=='user')return;
 
-    try{
+    const data=snap.val()||{};
 
-      const data=JSON.parse(localStorage.getItem('fb_sess_'+sessionId)||'{}');
+    const myKey=emailToKey(currentUser?.email||'');
 
-      if(currentUser&&data.participants&&data.participants[currentUser.email]?.role==='operator'){
+    if(data.participants&&data.participants[myKey]?.role==='operator'){
 
-        stopUserSync();
-
-        if(data.state)loadSessionState(data.state);
-
-        applyRole('operator');
-
-        refreshAllViews();
-
-        return;
-
-      }
+      stopUserSync();
 
       if(data.state)loadSessionState(data.state);
 
+      applyRole('operator');
+
       refreshAllViews();
 
-    }catch{}
+      return;
 
-  },3000);
+    }
+
+    if(data.state){loadSessionState(data.state);refreshAllViews();}
+
+  });
 
 }
 
 function stopUserSync(){
 
-  window.removeEventListener('storage',onStorageChange);
-
-  if(_syncInterval){clearInterval(_syncInterval);_syncInterval=null;}
-
-}
-
-function onStorageChange(e){
-
-  if(!sessionId||userRole!=='user')return;
-
-  if(e.key==='fb_sess_'+sessionId){
-
-    try{
-
-      const data=JSON.parse(e.newValue||'{}');
-
-      if(currentUser&&data.participants&&data.participants[currentUser.email]?.role==='operator'){
-
-        stopUserSync();
-
-        if(data.state)loadSessionState(data.state);
-
-        applyRole('operator');
-
-        refreshAllViews();
-
-        return;
-
-      }
-
-      if(data.state){loadSessionState(data.state);refreshAllViews();}
-
-    }catch{}
-
-  }
+  if(_userSyncRef){_userSyncRef.off();_userSyncRef=null;}
 
 }
 
@@ -5876,31 +5698,8 @@ function onStorageChange(e){
 
   document.getElementById('groupsUp').disabled=(numGroups>=8);
 
-  // Cleanup: remove stale session entries that have no data
-
-  (()=>{
-
-    const all=getSessions();
-
-    const valid=all.filter(s=>{try{return!!localStorage.getItem('fb_sess_'+s.id);}catch{return false;}});
-
-    if(valid.length!==all.length)saveSessions(valid);
-
-  })();
-
-  // Auth check: already logged in via sessionStorage?
-
-  const savedUser=getCurrentUser();
-
-  if(savedUser){
-
-    onAuthSuccess(savedUser);
-
-  }else{
-
-    document.getElementById('authScreen').style.display='flex';
-
-  }
+  // Auth is handled by fbAuth.onAuthStateChanged above
+  // Auth screen is visible by default until Firebase resolves
 
   switchTab('setup');
 
