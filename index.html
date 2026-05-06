@@ -1440,7 +1440,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
       <div><div class="sr-label">Turnier zurücksetzen</div><div class="sr-desc">Alle Runden und Ergebnisse löschen — Teams bleiben</div></div>
 
-      <button class="btn-danger" onclick="resetTournament()">Zurücksetzen</button>
+      <button class="btn-danger" id="resetTournamentBtn" onclick="resetTournament()">Zurücksetzen</button>
 
     </div>
 
@@ -2505,6 +2505,8 @@ function startTournament(){
 }
 
 function resetTournament(){
+
+  if(userRole==='user'){alert('Nur Admins und Operatoren können das Turnier zurücksetzen.');return;}
 
   if(!confirm('Turnier zurücksetzen? Alle Runden und Ergebnisse werden gelöscht.'))return;
 
@@ -5523,6 +5525,10 @@ function applyRole(role){
   const pCard=document.getElementById('participantsCard');
 
   if(pCard)pCard.style.display=isAdmin?'':'none';
+
+  const resetBtn=document.getElementById('resetTournamentBtn');
+
+  if(resetBtn)resetBtn.style.display=isUser?'none':'';
 
   if(isUser){
 
