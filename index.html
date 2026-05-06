@@ -5446,9 +5446,23 @@ async function createSession(){
 
   const code=genCode();
 
-  await fbDb.ref('sessions/'+code).set({id:code,name,hasPw,createdAt:Date.now(),creatorEmail:currentUser?.email||''});
+  const creatorName=currentUser?.displayName||currentUser?.email?.split('@')[0]||'';
+
+  await fbDb.ref('sessions/'+code).set({id:code,name,hasPw,createdAt:Date.now(),creatorEmail:currentUser?.email||'',creatorName});
 
   await fbDb.ref('session_data/'+code).set({name,pw,state:null,updatedAt:Date.now()});
+
+  // Reset all tournament state for the fresh session
+  teams=[];referees=[];refMode='none';
+  numFields=3;opponentCooldown=6;
+  gameMode='roundrobin';
+  numGroups=2;maxConsecutive=2;
+  scoring={rr:{win:2,draw:1,loss:0},gz:{win:2,draw:1,loss:0},gs:{matchWin:3,matchDraw:1,matchLoss:0,matchNearLoss:1},numSets:3,winSets:2};
+  rounds=[];currentRound=0;started=false;slotGlobalCounter=0;
+  matchHistory={};refHistory={};teamPlayCount={};
+  groups=[];groupPhase='group';groupMatches=[];placementRounds=[];
+  tournamentFinished=false;endspurtActive=false;endspurtTarget=0;
+  timerDur=15*60;timerRem=15*60;clearInterval(timerInterval);timerInterval=null;timerRunning=false;
 
   sessionId=code;sessionName=name;sessionPassword=pw;
 
@@ -5459,6 +5473,8 @@ async function createSession(){
   document.getElementById('sessionStartScreen').style.display='none';
 
   showSessionToast(code,name,'admin');
+
+  refreshAllViews();
 
 }
 
@@ -5488,7 +5504,7 @@ function renderSessList(){
 
         <div class="sess-card-name">${esc(s.name)}</div>
 
-        <div class="sess-card-meta">Code: <b>${s.id}</b>${s.hasPw?' &nbsp;&#128274;':''}</div>
+        <div class="sess-card-meta">Code: <b>${s.id}</b>${s.hasPw?' &nbsp;&#128274;':''} &nbsp;·&nbsp; 👤 ${esc(s.creatorName||s.creatorEmail?.split('@')[0]||'Unbekannt')}</div>
 
       </div>
 
