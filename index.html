@@ -2506,7 +2506,7 @@ function startTournament(){
 
 function resetTournament(){
 
-  if(userRole==='user'){alert('Nur Admins und Operatoren können das Turnier zurücksetzen.');return;}
+  if(userRole!=='admin'){alert('Nur der Session-Admin kann das Turnier zurücksetzen.');return;}
 
   if(!confirm('Turnier zurücksetzen? Alle Runden und Ergebnisse werden gelöscht.'))return;
 
@@ -5528,7 +5528,7 @@ function applyRole(role){
 
   const resetBtn=document.getElementById('resetTournamentBtn');
 
-  if(resetBtn)resetBtn.style.display=isUser?'none':'';
+  if(resetBtn)resetBtn.style.display=isAdmin?'':'none';
 
   if(isUser){
 
