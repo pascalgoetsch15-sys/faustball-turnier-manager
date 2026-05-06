@@ -4,7 +4,7 @@
 
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 
-<title>Faustball Turnier · v1</title>
+<title>Faustball Turnier · v1.1</title>
 
 <link href=https://fonts.googleapis.com/css2?family=Bebas+Neue&amp;family=DM+Sans:wght@300;400;500;600&amp;display=swap rel="stylesheet">
 
@@ -1448,7 +1448,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
       <div><div class="sr-label">Version</div><div class="sr-desc">Faustball Turnier</div></div>
 
-      <span class="version-badge">v1</span>
+      <span class="version-badge">v1.1</span>
 
     </div>
 
@@ -1456,9 +1456,57 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
   <div class="card">
 
-    <h3>📋 Änderungsprotokoll (v1)</h3>
+    <h3>📋 Änderungsprotokoll (v1.1)</h3>
 
     <ul class="changelog-list">
+
+      <li class="changelog-item">
+
+        <span class="changelog-tag NEW">NEW</span>
+
+        <div class="changelog-text"><strong>Google-Login:</strong> Anmeldung ausschliesslich über Google/Gmail. Jede E-Mail kann global nur einmal verwendet werden.</div>
+
+      </li>
+
+      <li class="changelog-item">
+
+        <span class="changelog-tag NEW">NEW</span>
+
+        <div class="changelog-text"><strong>Globale Sessions:</strong> Sessions sind für alle Nutzer sichtbar und werden in Echtzeit über Firebase synchronisiert.</div>
+
+      </li>
+
+      <li class="changelog-item">
+
+        <span class="changelog-tag NEW">NEW</span>
+
+        <div class="changelog-text"><strong>Timer-Synchronisation:</strong> Der Timer wird sessionübergreifend synchronisiert — Start/Stopp/Reset des Admins ist sofort bei allen Teilnehmern sichtbar. Jede Session hat einen unabhängigen Timer.</div>
+
+      </li>
+
+      <li class="changelog-item">
+
+        <span class="changelog-tag NEW">NEW</span>
+
+        <div class="changelog-text"><strong>Schoch-Modus:</strong> «Rundenturnier» wurde in «Schoch» umbenannt.</div>
+
+      </li>
+
+      <li class="changelog-item">
+
+        <span class="changelog-tag NEW">NEW</span>
+
+        <div class="changelog-text"><strong>Ergebnis nachträglich ändern:</strong> Abgeschlossene Spiele der aktuellen Runde können von Admin/Operator erneut bearbeitet werden (nicht mehr möglich sobald nächste Runde generiert wurde).</div>
+
+      </li>
+
+      <li class="changelog-item">
+
+        <span class="changelog-tag NEW">NEW</span>
+
+        <div class="changelog-text"><strong>Bestätigung vor nächster Runde:</strong> Vor dem Generieren einer neuen Runde wird gefragt, ob alle Ergebnisse korrekt sind.</div>
+
+      </li>
 
       <li class="changelog-item">
 
@@ -3498,7 +3546,7 @@ function renderMatches(){
 
         '<div class="slot-progress"><div class="slot-progress-fill" style="width:'+Math.round(tot?done/tot*100:100)+'%"></div></div>'+
 
-        '<div class="fields-grid">'+pm.map(m=>rrMatchCard(m,isActive&&!sDone)).join('')+'</div></div>';
+        '<div class="fields-grid">'+pm.map(m=>rrMatchCard(m,isActive&&!sDone,ri===rounds.length-1)).join('')+'</div></div>';
 
     });
 
@@ -3610,23 +3658,23 @@ function renderMatches(){
 
 function reopenMatch(id){
 
-  for(const round of rounds){
+  const lastRound=rounds[rounds.length-1];
 
-    for(const slot of round){
+  if(!lastRound)return;
 
-      const m=slot.matches.find(x=>x.id===id);
+  for(const slot of lastRound){
 
-      if(m){
+    const m=slot.matches.find(x=>x.id===id);
 
-        m.done=false;m.scoreA=null;m.scoreB=null;
+    if(m){
 
-        slot.done=false;
+      m.done=false;m.scoreA=null;m.scoreB=null;
 
-        renderMatches();renderStandings();saveSessionState();
+      slot.done=false;
 
-        return;
+      renderMatches();renderStandings();saveSessionState();
 
-      }
+      return;
 
     }
 
@@ -3950,7 +3998,7 @@ function refChipHtml(m){
 
 }
 
-function rrMatchCard(m,isActive){
+function rrMatchCard(m,isActive,isLastRound){
 
   const nA=tname(m.teamAId),nB=tname(m.teamBId);
 
@@ -3982,7 +4030,7 @@ function rrMatchCard(m,isActive){
 
         <div style="margin-top:7px"><span class="badge ${draw?'badge-draw':'badge-done'}">${draw?scoring.rr.draw+':'+scoring.rr.draw+' Pkte':(aW?scoring.rr.win+':'+scoring.rr.loss+' → '+esc(nA):scoring.rr.win+':'+scoring.rr.loss+' → '+esc(nB))}</span></div>
 
-        ${(userRole==='admin'||userRole==='operator')?`<button onclick="reopenMatch('${m.id}')" style="margin-top:8px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer">✏ Ergebnis ändern</button>`:''}
+        ${(isLastRound&&(userRole==='admin'||userRole==='operator'))?`<button onclick="reopenMatch('${m.id}')" style="margin-top:8px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer">✏ Ergebnis ändern</button>`:''}
 
       </div></div>`;
 
