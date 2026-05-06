@@ -1760,7 +1760,7 @@ function applyTimerState(t){
 
   clearInterval(timerInterval);timerInterval=null;timerRunning=false;timerIsOvertime=false;
 
-  if(!t){timerRem=timerDur;drawTimer();return;}
+  if(!t){timerDur=15*60;timerRem=15*60;drawTimer();return;}
 
   timerDur=t.dur||15*60;timerIsOvertime=t.overtime||false;
 
