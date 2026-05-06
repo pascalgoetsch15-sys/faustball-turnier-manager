@@ -1758,9 +1758,9 @@ function saveTimerState(){
 
 function applyTimerState(t){
 
-  if(!t)return;
+  clearInterval(timerInterval);timerInterval=null;timerRunning=false;timerIsOvertime=false;
 
-  clearInterval(timerInterval);timerInterval=null;
+  if(!t){timerRem=timerDur;drawTimer();return;}
 
   timerDur=t.dur||15*60;timerIsOvertime=t.overtime||false;
 
