@@ -1720,11 +1720,11 @@ function timerToggle(){
 
   else{timerRunning=true;timerInterval=setInterval(timerTick,1000);}
 
-  drawTimer();
+  drawTimer();saveTimerState();
 
 }
 
-function timerReset(){clearInterval(timerInterval);timerRunning=false;timerIsOvertime=false;timerRem=timerDur;drawTimer();}
+function timerReset(){clearInterval(timerInterval);timerRunning=false;timerIsOvertime=false;timerRem=timerDur;drawTimer();saveTimerState();}
 
 function setDur(mins,btn){
 
@@ -1737,6 +1737,46 @@ function setDur(mins,btn){
   if(btn)btn.classList.add('active');
 
   document.getElementById('customMin').value='';
+
+  drawTimer();saveTimerState();
+
+}
+
+function saveTimerState(){
+
+  if(!sessionId||(userRole!=='admin'&&userRole!=='operator'))return;
+
+  fbDb.ref('session_data/'+sessionId+'/timer').set({
+
+    dur:timerDur,rem:timerRem,running:timerRunning,
+
+    startedAt:timerRunning?Date.now():null,overtime:timerIsOvertime
+
+  }).catch(()=>{});
+
+}
+
+function applyTimerState(t){
+
+  if(!t)return;
+
+  clearInterval(timerInterval);timerInterval=null;
+
+  timerDur=t.dur||15*60;timerIsOvertime=t.overtime||false;
+
+  if(t.running&&t.startedAt){
+
+    const elapsed=Math.floor((Date.now()-t.startedAt)/1000);
+
+    timerRem=Math.max(t.overtime?-9999:0,(t.rem||timerDur)-elapsed);
+
+    timerRunning=true;timerInterval=setInterval(timerTick,1000);
+
+  }else{
+
+    timerRem=t.rem??timerDur;timerRunning=false;
+
+  }
 
   drawTimer();
 
@@ -5626,27 +5666,33 @@ function startUserSync(){
 
   _userSyncRef.on('value',snap=>{
 
-    if(!sessionId||userRole!=='user')return;
+    if(!sessionId||(userRole!=='user'&&userRole!=='operator'))return;
 
     const data=snap.val()||{};
 
     const myKey=emailToKey(currentUser?.email||'');
 
-    if(data.participants&&data.participants[myKey]?.role==='operator'){
+    if(userRole==='user'&&data.participants&&data.participants[myKey]?.role==='operator'){
 
       stopUserSync();
 
       if(data.state)loadSessionState(data.state);
 
+      applyTimerState(data.timer);
+
       applyRole('operator');
 
       refreshAllViews();
+
+      startUserSync();
 
       return;
 
     }
 
     if(data.state){loadSessionState(data.state);refreshAllViews();}
+
+    applyTimerState(data.timer);
 
   });
 
