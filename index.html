@@ -928,7 +928,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
 
-    <div id="headerModeBadge" class="header-mode-badge" style="display:none">Rundenturnier</div>
+    <div id="headerModeBadge" class="header-mode-badge" style="display:none">Schoch</div>
 
     <div id="userInfoBadge" style="display:none;flex-direction:column;align-items:flex-end;gap:2px">
 
@@ -988,7 +988,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
         <div class="mc-icon">🔄</div>
 
-        <div class="mc-name">Rundenturnier</div>
+        <div class="mc-name">Schoch</div>
 
         <div class="mc-desc">Jeder gegen jeden. Neue Runden auf Knopfdruck. Skill-basiert nach Runde 1.</div>
 
@@ -2096,7 +2096,7 @@ function updateHeaderBadge(){
 
   if(!b)return;
 
-  const labels={roundrobin:'Rundenturnier',gruppenzeit:'Gruppen · Zeit',gruppensaetze:'Gruppen · Sätze'};
+  const labels={roundrobin:'Schoch',gruppenzeit:'Gruppen · Zeit',gruppensaetze:'Gruppen · Sätze'};
 
   b.textContent=labels[gameMode]||'';
 
@@ -2462,7 +2462,7 @@ function updateStartCard(){
 
 function getModeLabel(){
 
-  return{roundrobin:'Rundenturnier',gruppenzeit:'Gruppen (Zeit)',gruppensaetze:'Gruppen (Sätze)'}[gameMode]||gameMode;
+  return{roundrobin:'Schoch',gruppenzeit:'Gruppen (Zeit)',gruppensaetze:'Gruppen (Sätze)'}[gameMode]||gameMode;
 
 }
 
@@ -3608,6 +3608,32 @@ function renderMatches(){
 
  
 
+function reopenMatch(id){
+
+  for(const round of rounds){
+
+    for(const slot of round){
+
+      const m=slot.matches.find(x=>x.id===id);
+
+      if(m){
+
+        m.done=false;m.scoreA=null;m.scoreB=null;
+
+        slot.done=false;
+
+        renderMatches();renderStandings();saveSessionState();
+
+        return;
+
+      }
+
+    }
+
+  }
+
+}
+
 function nextRoundAction(){
 
   if(!allCurrentRoundDone()){
@@ -3617,6 +3643,8 @@ function nextRoundAction(){
   }
 
   if(endspurtActive){return;}
+
+  if(!confirm('Stimmen alle Ergebnisse der aktuellen Runde?\n\nNächste Runde wird generiert.')){return;}
 
   generateRound(false);
 
@@ -3953,6 +3981,8 @@ function rrMatchCard(m,isActive){
         <div class="score-display"><span>${m.scoreA}</span><span class="score-colon">:</span><span>${m.scoreB}</span></div>
 
         <div style="margin-top:7px"><span class="badge ${draw?'badge-draw':'badge-done'}">${draw?scoring.rr.draw+':'+scoring.rr.draw+' Pkte':(aW?scoring.rr.win+':'+scoring.rr.loss+' → '+esc(nA):scoring.rr.win+':'+scoring.rr.loss+' → '+esc(nB))}</span></div>
+
+        ${(userRole==='admin'||userRole==='operator')?`<button onclick="reopenMatch('${m.id}')" style="margin-top:8px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer">✏ Ergebnis ändern</button>`:''}
 
       </div></div>`;
 
