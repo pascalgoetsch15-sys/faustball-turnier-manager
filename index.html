@@ -3298,6 +3298,8 @@ function generateRound(isFirst){
 
 function triggerEndspurt(){
 
+  if(userRole==='user'){alert('Keine Berechtigung.');return;}
+
   if(!allCurrentRoundDone()){
 
     alert('Bitte zuerst alle Ergebnisse der aktuellen Runde eintragen.');
@@ -3598,7 +3600,7 @@ function renderMatches(){
 
     }
 
-    html+=`<div class="round-actions">
+    if(userRole!=='user')html+=`<div class="round-actions">
 
       <div class="round-actions-label">Turnier-Aktionen</div>
 
@@ -3616,7 +3618,7 @@ function renderMatches(){
 
  
 
-    html+=`<div class="round-actions">
+    if(userRole!=='user')html+=`<div class="round-actions">
 
       <div class="round-actions-label">Turnier-Aktionen</div>
 
@@ -3693,6 +3695,8 @@ function reopenMatch(id){
 }
 
 function nextRoundAction(){
+
+  if(userRole==='user'){alert('Keine Berechtigung.');return;}
 
   if(!allCurrentRoundDone()){
 
@@ -3890,11 +3894,11 @@ function renderGroupMatches(){
 
   if(allGroupMatchesDone()&&groupPhase==='group'){
 
-    html+='<div class="round-actions"><div class="round-actions-label">Nächste Phase</div><button class="btn-next-round" onclick="startPlacementPhase()">⚡ Platzierungsrunden generieren</button><button class="beenden-btn" onclick="finishTournament()">🏁 Turnier beenden</button></div>';
+    if(userRole!=='user')html+='<div class="round-actions"><div class="round-actions-label">Nächste Phase</div><button class="btn-next-round" onclick="startPlacementPhase()">⚡ Platzierungsrunden generieren</button><button class="beenden-btn" onclick="finishTournament()">🏁 Turnier beenden</button></div>';
 
   } else if(!allGroupMatchesDone()&&groupPhase==='group'){
 
-    html+='<div class="round-actions"><div class="round-actions-label">Turnier-Aktionen</div><button class="beenden-btn" onclick="finishTournament()">🏁 Turnier beenden</button></div>';
+    if(userRole!=='user')html+='<div class="round-actions"><div class="round-actions-label">Turnier-Aktionen</div><button class="beenden-btn" onclick="finishTournament()">🏁 Turnier beenden</button></div>';
 
   }
 
@@ -3934,7 +3938,7 @@ function renderGroupMatches(){
 
     html+='</div>';
 
-    html+='<div class="round-actions"><div class="round-actions-label">Turnier-Aktionen</div><button class="beenden-btn" onclick="finishTournament()">🏁 Turnier beenden</button></div>';
+    if(userRole!=='user')html+='<div class="round-actions"><div class="round-actions-label">Turnier-Aktionen</div><button class="beenden-btn" onclick="finishTournament()">🏁 Turnier beenden</button></div>';
 
   }
 
@@ -3984,7 +3988,7 @@ function renderStandingsTable(gs,isZeit,highlightTop){
 
 }
 
-function startPlacementPhase(){generatePlacementRounds();renderMatches();}
+function startPlacementPhase(){if(userRole==='user'){alert('Keine Berechtigung.');return;}generatePlacementRounds();renderMatches();}
 
  
 
@@ -4459,6 +4463,8 @@ function checkPlacementRoundDone(){
 ============================================================ */
 
 function finishTournament(){
+
+  if(userRole==='user'){alert('Keine Berechtigung.');return;}
 
   if(!confirm('Turnier wirklich beenden? Die Rangliste wird mit dem aktuellen Stand erstellt.'))return;
 
