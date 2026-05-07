@@ -3346,7 +3346,7 @@ function triggerEndspurt(){
 
  
 
-/* Called after every score is submitted in RR mode */
+/* Called after every score is submitted in RR mode, and after rejoining as admin */
 
 function checkEndspurtAutoAdvance(){
 
@@ -3354,13 +3354,14 @@ function checkEndspurtAutoAdvance(){
 
   if(!allCurrentRoundDone()) return;
 
- 
 
-  // Check if target reached
 
-  if(playCountsEqual() && getMinPlayCount()>=endspurtTarget){
+  // Stop when every team has played at least the target number of games.
+  // Using getMinPlayCount() alone (not playCountsEqual) so odd-team-count
+  // tournaments work correctly — with a bye each round, some teams may end
+  // up one game ahead of the target, and that is acceptable.
 
-    // Done! Auto-finish
+  if(getMinPlayCount()>=endspurtTarget){
 
     setTimeout(()=>{
 
@@ -3374,37 +3375,21 @@ function checkEndspurtAutoAdvance(){
 
   }
 
- 
 
-  // Still need more rounds — generate next endspurt round
 
-  // But only if there are still teams behind
+  // At least one team is still below target — generate next endspurt round
 
-  if(!playCountsEqual()){
+  setTimeout(()=>{
 
-    setTimeout(()=>{
+    generateRound(false);
 
-      generateRound(false);
+    renderMatches();
 
-      renderMatches();
+    renderStandings();
 
-      renderStandings();
+    saveSessionState();
 
-    }, 300);
-
-  } else {
-
-    // All equal but maybe didn't hit target yet? Finish anyway.
-
-    setTimeout(()=>{
-
-      endspurtActive=false;
-
-      doFinishTournament();
-
-    }, 300);
-
-  }
+  }, 300);
 
 }
 
@@ -5343,6 +5328,8 @@ async function rejoinAsAdmin(code){
     showSessionToast(code,sess.name,'admin');
 
     refreshAllViews();
+
+    if(endspurtActive&&allCurrentRoundDone())checkEndspurtAutoAdvance();
 
   }catch(e){alert('Fehler beim Beitreten als Admin.');}
 
