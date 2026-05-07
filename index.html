@@ -2562,6 +2562,18 @@ function startTournament(){
 
 }
 
+function clearLocalState(){
+  teams=[];referees=[];refMode='none';
+  numFields=3;opponentCooldown=6;
+  gameMode='roundrobin';
+  numGroups=2;maxConsecutive=2;
+  scoring={rr:{win:2,draw:1,loss:0},gz:{win:2,draw:1,loss:0},gs:{matchWin:3,matchDraw:1,matchLoss:0,matchNearLoss:1},numSets:3,winSets:2};
+  rounds=[];currentRound=0;started=false;slotGlobalCounter=0;
+  matchHistory={};refHistory={};teamPlayCount={};
+  groups=[];groupPhase='group';groupMatches=[];placementRounds=[];
+  tournamentFinished=false;endspurtActive=false;endspurtTarget=0;
+}
+
 function resetTournament(){
 
   if(userRole!=='admin'){alert('Nur der Session-Admin kann das Turnier zurücksetzen.');return;}
@@ -5313,6 +5325,8 @@ async function rejoinAsAdmin(code){
 
     clearInterval(timerInterval);timerInterval=null;timerRunning=false;
 
+    clearLocalState();
+
     sessionId=code;sessionName=sess.name;sessionPassword=data.pw||'';
 
     if(data.state)loadSessionState(data.state);
@@ -5439,16 +5453,7 @@ async function createSession(){
 
   await fbDb.ref('session_data/'+code).set({name,pw,state:null,updatedAt:Date.now()});
 
-  // Reset all tournament state for the fresh session
-  teams=[];referees=[];refMode='none';
-  numFields=3;opponentCooldown=6;
-  gameMode='roundrobin';
-  numGroups=2;maxConsecutive=2;
-  scoring={rr:{win:2,draw:1,loss:0},gz:{win:2,draw:1,loss:0},gs:{matchWin:3,matchDraw:1,matchLoss:0,matchNearLoss:1},numSets:3,winSets:2};
-  rounds=[];currentRound=0;started=false;slotGlobalCounter=0;
-  matchHistory={};refHistory={};teamPlayCount={};
-  groups=[];groupPhase='group';groupMatches=[];placementRounds=[];
-  tournamentFinished=false;endspurtActive=false;endspurtTarget=0;
+  clearLocalState();
   timerDur=15*60;timerRem=15*60;clearInterval(timerInterval);timerInterval=null;timerRunning=false;
 
   sessionId=code;sessionName=name;sessionPassword=pw;
@@ -5550,6 +5555,8 @@ async function confirmJoinSession(){
     stopUserSync();
 
     clearInterval(timerInterval);timerInterval=null;timerRunning=false;
+
+    clearLocalState();
 
     sessionId=selectedJoinId;sessionName=sess.name;
 
