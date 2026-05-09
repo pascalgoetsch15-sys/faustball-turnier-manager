@@ -998,9 +998,9 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
         <div class="mc-icon">⏱ 👥</div>
 
-        <div class="mc-name">Gruppen (Zeit)</div>
+        <div class="mc-name">Gruppen · Zeitwertung</div>
 
-        <div class="mc-desc">Gruppen-Rundenspiele mit Zeit-Wertung (1 Satz).</div>
+        <div class="mc-desc">Gruppen-Rundenspiele mit Zeitlimit (1 Satz pro Spiel, Timer läuft).</div>
 
       </div>
 
@@ -1008,7 +1008,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
         <div class="mc-icon">🎯 👥</div>
 
-        <div class="mc-name">Gruppen (Sätze)</div>
+        <div class="mc-name">Gruppen · Satzwertung</div>
 
         <div class="mc-desc">Gruppen-Rundenspiele mit Satz-Wertung (2+ Sätze, kein Timer).</div>
 
@@ -2154,7 +2154,7 @@ function updateHeaderBadge(){
 
   if(!b)return;
 
-  const labels={roundrobin:'Schoch',gruppenzeit:'Gruppen · Zeit',gruppensaetze:'Gruppen · Sätze'};
+  const labels={roundrobin:'Schoch',gruppenzeit:'Gruppen · Zeitwertung',gruppensaetze:'Gruppen · Satzwertung'};
 
   b.textContent=labels[gameMode]||'';
 
@@ -2520,7 +2520,7 @@ function updateStartCard(){
 
 function getModeLabel(){
 
-  return{roundrobin:'Schoch',gruppenzeit:'Gruppen (Zeit)',gruppensaetze:'Gruppen (Sätze)'}[gameMode]||gameMode;
+  return{roundrobin:'Schoch',gruppenzeit:'Gruppen · Zeitwertung',gruppensaetze:'Gruppen · Satzwertung'}[gameMode]||gameMode;
 
 }
 
@@ -4834,6 +4834,17 @@ async function signInWithGoogle(){
   }
 }
 
+let _lastSeenInterval=null;
+function startLastSeenHeartbeat(key){
+  if(_lastSeenInterval)clearInterval(_lastSeenInterval);
+  const tick=()=>fbDb.ref('users/'+key+'/lastSeen').set(Date.now());
+  tick();
+  _lastSeenInterval=setInterval(tick,60000);
+}
+function stopLastSeenHeartbeat(){
+  if(_lastSeenInterval){clearInterval(_lastSeenInterval);_lastSeenInterval=null;}
+}
+
 fbAuth.onAuthStateChanged(async firebaseUser=>{
   if(firebaseUser){
     const role=firebaseUser.email===SUPERADMIN_EMAIL?'superadmin':'user';
@@ -4850,10 +4861,12 @@ fbAuth.onAuthStateChanged(async firebaseUser=>{
     }
     const cu={email:userData.email,username:userData.username,role:userData.role};
     currentUser=cu;
+    startLastSeenHeartbeat(key);
     initSessionsListener();
     onAuthSuccess(cu);
   }else{
     currentUser=null;
+    stopLastSeenHeartbeat();
     stopSessionsListener();
     document.getElementById('authScreen').style.display='flex';
     document.getElementById('sessionStartScreen').style.display='none';
@@ -4882,9 +4895,9 @@ function onAuthSuccess(cu){
 
   document.getElementById('sessionStartScreen').style.display='flex';
 
-  const isSysPriv=cu.role==='superadmin'||cu.role==='system_operator';
+  const isSysPriv=cu.role==='superadmin'||cu.role==='system_admin'||cu.role==='system_operator';
 
-  const roleLbl=cu.role==='superadmin'?'System-Admin':cu.role==='system_operator'?'System-Operator':'';
+  const roleLbl=cu.role==='superadmin'?'System-Admin':cu.role==='system_admin'?'System-Admin':cu.role==='system_operator'?'System-Operator':'';
 
   const sessBar=document.getElementById('sess-username-bar');
 
@@ -4982,7 +4995,7 @@ async function changeUsername(){
 
   const sessBar=document.getElementById('sess-username-bar');
 
-  if(sessBar)sessBar.textContent='Angemeldet als '+name+(currentUser.role==='superadmin'?' · System-Admin':'');
+  if(sessBar)sessBar.textContent='Angemeldet als '+name+((currentUser.role==='superadmin'||currentUser.role==='system_admin')?' · System-Admin':currentUser.role==='system_operator'?' · System-Operator':'');
 
   showSettingsMsg('set-name-msg','Benutzername erfolgreich geändert.',true);
 
@@ -5000,7 +5013,7 @@ function renderAdminSessList(){
 
   const myEmail=currentUser?.email||'';
 
-  const isSuperAdmin=currentUser?.role==='superadmin';
+  const isSuperAdmin=currentUser?.role==='superadmin'||currentUser?.role==='system_admin';
 
   const isSysPriv=isSuperAdmin||currentUser?.role==='system_operator';
 
@@ -5036,13 +5049,11 @@ function renderAdminSessList(){
 
   el.innerHTML=html;
 
-  // User management: only superadmin
-
   const userSection=document.getElementById('admin-users-section');
 
-  if(userSection)userSection.style.display=isSuperAdmin?'':'none';
+  if(userSection)userSection.style.display=isSysPriv?'':'none';
 
-  if(isSuperAdmin)renderAdminUsersList();
+  if(isSysPriv)renderAdminUsersList();
 
 }
 
@@ -5058,35 +5069,83 @@ async function renderAdminUsersList(){
 
   const myEmail=currentUser?.email||'';
 
+  const myRole=currentUser?.role||'';
+
+  const canEditRoles=myRole==='superadmin'||myRole==='system_admin';
+
   const others=Object.values(usersObj).filter(u=>u.email!==myEmail&&u.role!=='superadmin');
 
   if(!others.length){el.innerHTML='<div style="color:var(--muted);font-size:.85rem;padding:6px 0">Keine anderen Nutzer vorhanden.</div>';return;}
+
+  const now=Date.now();
 
   let html='';
 
   others.forEach(u=>{
 
+    const isAdmin=u.role==='system_admin';
+
     const isOp=u.role==='system_operator';
 
     const safeEmail=u.email.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+
+    const roleColor=isAdmin?'#f97316':isOp?'#a78bfa':'var(--muted)';
+
+    const roleTxt=isAdmin?'System-Admin':isOp?'System-Operator':'Nutzer';
+
+    const lastSeen=u.lastSeen||0;
+
+    const online=lastSeen>0&&(now-lastSeen)<120000;
+
+    const onlineDot=online
+      ?`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;margin-right:4px;vertical-align:middle" title="Gerade online"></span>`
+      :`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--muted);margin-right:4px;vertical-align:middle" title="Offline"></span>`;
+
+    const lastSeenTxt=online?'<span style="color:#22c55e;font-size:.72rem">Gerade online</span>'
+      :lastSeen?`<span style="color:var(--muted);font-size:.72rem">Zuletzt: ${fmtRelTime(lastSeen)}</span>`
+      :`<span style="color:var(--muted);font-size:.72rem">Noch nie gesehen</span>`;
+
+    let btns='';
+
+    if(canEditRoles){
+
+      if(!isAdmin&&!isOp){
+
+        btns=`<button onclick="setSystemUserRole('${safeEmail}','system_admin')" style="background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.4);color:#f97316;border-radius:6px;padding:4px 9px;font-size:.75rem;cursor:pointer;margin-right:4px">⬆ Admin</button>`
+
+            +`<button onclick="setSystemUserRole('${safeEmail}','system_operator')" style="background:rgba(168,139,250,.15);border:1px solid rgba(168,139,250,.4);color:#a78bfa;border-radius:6px;padding:4px 9px;font-size:.75rem;cursor:pointer">⬆ Operator</button>`;
+
+      } else {
+
+        btns=`<button onclick="setSystemUserRole('${safeEmail}','user')" style="background:rgba(107,114,128,.1);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 9px;font-size:.75rem;cursor:pointer">⬇ Nutzer</button>`;
+
+        if(isOp){
+
+          btns=`<button onclick="setSystemUserRole('${safeEmail}','system_admin')" style="background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.4);color:#f97316;border-radius:6px;padding:4px 9px;font-size:.75rem;cursor:pointer;margin-right:4px">⬆ Admin</button>`+btns;
+
+        } else if(isAdmin){
+
+          btns=`<button onclick="setSystemUserRole('${safeEmail}','system_operator')" style="background:rgba(168,139,250,.15);border:1px solid rgba(168,139,250,.4);color:#a78bfa;border-radius:6px;padding:4px 9px;font-size:.75rem;cursor:pointer;margin-right:4px">⬇ Operator</button>`+btns;
+
+        }
+
+      }
+
+    }
 
     html+=`<div class="sess-session-card" style="cursor:default">
 
       <div style="flex:1;min-width:0">
 
-        <div class="sess-card-name">${esc(u.username)}</div>
+        <div class="sess-card-name">${onlineDot}${esc(u.username)}</div>
 
-        <div class="sess-card-meta">${esc(u.email)} · <span style="color:${isOp?'#a78bfa':'var(--muted)'}">${isOp?'System-Operator':'Nutzer'}</span></div>
+        <div class="sess-card-meta">${esc(u.email)} · <span style="color:${roleColor}">${roleTxt}</span></div>
 
-      </div>
-
-      <div style="flex-shrink:0">
-
-        ${!isOp?`<button onclick="setSystemUserRole('${safeEmail}','system_operator')" style="background:rgba(168,139,250,.15);border:1px solid rgba(168,139,250,.4);color:#a78bfa;border-radius:6px;padding:4px 9px;font-size:.75rem;cursor:pointer">⬆ Operator</button>`
-
-               :`<button onclick="setSystemUserRole('${safeEmail}','user')" style="background:rgba(107,114,128,.1);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 9px;font-size:.75rem;cursor:pointer">⬇ Nutzer</button>`}
+        <div style="margin-top:3px">${lastSeenTxt}</div>
 
       </div>
+
+      ${btns?`<div style="flex-shrink:0;display:flex;align-items:center;gap:4px">${btns}</div>`:''}
 
     </div>`;
 
@@ -5096,9 +5155,27 @@ async function renderAdminUsersList(){
 
 }
 
+function fmtRelTime(ts){
+
+  const diff=Math.floor((Date.now()-ts)/1000);
+
+  if(diff<60)return 'Gerade eben';
+
+  if(diff<3600)return Math.floor(diff/60)+' Min. ago';
+
+  if(diff<86400)return Math.floor(diff/3600)+' Std. ago';
+
+  const d=new Date(ts);
+
+  return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+
+}
+
 async function setSystemUserRole(email,role){
 
-  if(currentUser?.role!=='superadmin')return;
+  const r=currentUser?.role;
+
+  if(r!=='superadmin'&&r!=='system_admin')return;
 
   await fbDb.ref('users/'+emailToKey(email)+'/role').set(role);
 
