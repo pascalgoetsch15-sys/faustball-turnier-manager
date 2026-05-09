@@ -2182,7 +2182,7 @@ function setMode(m){
 
   document.getElementById('zufall-players-card').style.display=isZufall?'':'none';
 
-  document.getElementById('scoringCard').style.display=isZufall?'none':'';
+  document.getElementById('scoringCard').style.display='';
 
   if(isZufall)renderZufallPlayers();
 
@@ -2392,19 +2392,45 @@ function _pairsToMatches(pairs,genderTag){
   return matches;
 }
 
-function generateZufallRound(){
+function generateAllZufallRounds(){
   if(!started)return;
-  let matches=[];
-  if(zufallSameGender){
-    const mPairs=_makeOptimalPairs([...zufallMen]);
-    const wPairs=_makeOptimalPairs([...zufallWomen]);
-    matches=[..._pairsToMatches(mPairs,'m'),..._pairsToMatches(wPairs,'w')];
-  } else {
-    const mixPairs=_makeMixedPairs([...zufallMen],[...zufallWomen]);
-    matches=_pairsToMatches(mixPairs,'mix');
+  zufallRounds=[];
+  zufallPartnerCount={};zufallOpponentCount={};
+  [...zufallMen,...zufallWomen].forEach(p=>{zufallPartnerCount[p.id]={};zufallOpponentCount[p.id]={};});
+
+  const allPaired=()=>{
+    if(zufallSameGender){
+      for(let i=0;i<zufallMen.length;i++)
+        for(let j=i+1;j<zufallMen.length;j++)
+          if(!(zufallPartnerCount[zufallMen[i].id]?.[zufallMen[j].id]))return false;
+      for(let i=0;i<zufallWomen.length;i++)
+        for(let j=i+1;j<zufallWomen.length;j++)
+          if(!(zufallPartnerCount[zufallWomen[i].id]?.[zufallWomen[j].id]))return false;
+      return true;
+    } else {
+      for(const m of zufallMen)
+        for(const w of zufallWomen)
+          if(!(zufallPartnerCount[m.id]?.[w.id]))return false;
+      return true;
+    }
+  };
+
+  const maxRounds=200;let iters=0;
+  while(!allPaired()&&iters<maxRounds){
+    let matches=[];
+    if(zufallSameGender){
+      const mPairs=_makeOptimalPairs([...zufallMen]);
+      const wPairs=_makeOptimalPairs([...zufallWomen]);
+      matches=[..._pairsToMatches(mPairs,'m'),..._pairsToMatches(wPairs,'w')];
+    } else {
+      const mixPairs=_makeMixedPairs([...zufallMen],[...zufallWomen]);
+      matches=_pairsToMatches(mixPairs,'mix');
+    }
+    if(!matches.length)break;
+    matches.forEach(m=>_updateZufallHistory(m));
+    zufallRounds.push({matches});
+    iters++;
   }
-  if(!matches.length){alert('Nicht genug Spieler für eine Runde (mind. 4).');return;}
-  zufallRounds.push({matches});
   renderZufallMatches();
   renderZufallStandings();
   saveSessionState();
@@ -2428,7 +2454,6 @@ function submitZufallScore(matchId,roundIdx){
   const round=zufallRounds[roundIdx];if(!round)return;
   const match=round.matches.find(m=>m.id===matchId);if(!match||match.done)return;
   match.scoreA=sa;match.scoreB=sb;match.done=true;
-  _updateZufallHistory(match);
   renderZufallMatches();
   renderZufallStandings();
   saveSessionState();
@@ -2446,9 +2471,8 @@ function reopenZufallMatch(matchId,roundIdx){
 function renderZufallMatches(){
   const el=document.getElementById('matchesContent');if(!el)return;
   if(!zufallRounds.length){
-    el.innerHTML='<div class="empty">Runde 1 wird nach dem Start generiert.</div>';return;
+    el.innerHTML='<div class="empty">Noch keine Runden generiert.</div>';return;
   }
-  const allRoundsDone=zufallRounds.every(r=>r.matches.every(m=>m.done));
   let html='';
   zufallRounds.forEach((round,ri)=>{
     const isLast=ri===zufallRounds.length-1;
@@ -2481,11 +2505,6 @@ function renderZufallMatches(){
       </div>`;
     });
     html+='</div>';
-    if(isLast&&roundDone){
-      html+=`<div style="text-align:center;margin:12px 0">
-        <button class="btn-primary" onclick="generateZufallRound()" style="padding:10px 28px">+ Neue Runde generieren</button>
-      </div>`;
-    }
   });
   el.innerHTML=html;
 }
@@ -2561,7 +2580,7 @@ function renderScoringSettings(){
 
   if(!el)return;
 
-  if(gameMode==='roundrobin'){
+  if(gameMode==='roundrobin'||gameMode==='zufall'){
 
     el.innerHTML=`<div class="scoring-grid">
 
@@ -3071,7 +3090,7 @@ function startTournament(){
 
     updateHeaderBadge();applyStartedLock();updateStartCard();
 
-    generateZufallRound();
+    generateAllZufallRounds();
 
     renderZufallPlayers();
 
