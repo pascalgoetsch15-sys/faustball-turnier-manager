@@ -892,6 +892,22 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
         <div id="sys-bgThemeLabel" style="font-size:.75rem;color:var(--muted);margin-top:6px">Standard</div>
 
+        <div style="margin-top:16px">
+
+          <div style="font-size:.7rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">GUI-Grösse</div>
+
+          <div style="display:flex;align-items:center;gap:12px">
+
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--accent);min-width:28px;text-align:center" id="sys-guiScaleVal">5</span>
+
+            <input type="range" min="1" max="9" step="1" value="5" id="sys-guiScaleSlider" oninput="setGuiScale(this.value)" style="flex:1;accent-color:var(--accent)">
+
+          </div>
+
+          <div style="font-size:.72rem;color:var(--muted);margin-top:4px" id="sys-guiScaleInfo">Normal (5) — 15px</div>
+
+        </div>
+
       </div>
 
     </div>
@@ -1746,6 +1762,18 @@ function setGuiScale(v){
   document.getElementById('guiScaleSlider').value=guiScale;
 
   document.getElementById('guiScaleInfo').innerHTML='Aktuelle Grösse: <b>'+guiScaleLabels[guiScale]+'</b>';
+
+  const sv=document.getElementById('sys-guiScaleVal');
+
+  const ss=document.getElementById('sys-guiScaleSlider');
+
+  const si=document.getElementById('sys-guiScaleInfo');
+
+  if(sv)sv.textContent=guiScale;
+
+  if(ss)ss.value=guiScale;
+
+  if(si)si.textContent=guiScaleLabels[guiScale];
 
   try{localStorage.setItem('fb_guiscale',guiScale);}catch(e){}
 
