@@ -2409,14 +2409,12 @@ function _makeMixedPairs(men,women){
 function _pairsToMatches(pairs,genderTag){
   const matches=[];
   for(let i=0;i+1<pairs.length;i+=2){
-    const pA=pairs[i],pB=pairs[i+1];
-    // Try to pick opponent pair that minimises opponent-repetition
+    const pA=pairs[i];
     let bestJ=i+1,bestCost=_zufallOpponentCost(pA,pairs[i+1]);
-    for(let j=i+2;j<pairs.length-((pairs.length-i)%2===0?0:1);j+=2){
+    for(let j=i+2;j<pairs.length;j+=2){
       const c=_zufallOpponentCost(pA,pairs[j]);
       if(c<bestCost){bestCost=c;bestJ=j;}
     }
-    // swap pairs[i+1] and pairs[bestJ]
     if(bestJ!==i+1){const tmp=pairs[i+1];pairs[i+1]=pairs[bestJ];pairs[bestJ]=tmp;}
     matches.push({
       id:'zrm'+Date.now()+'-'+i+'-'+Math.random().toString(36).slice(2,6),
@@ -2426,9 +2424,11 @@ function _pairsToMatches(pairs,genderTag){
       bNames:pairs[i+1].map(p=>p.name),
       scoreA:null,scoreB:null,done:false,gender:genderTag,fieldNum:matches.length+1
     });
-    i++; // skip next pair since it was used
+    // i+=2 (for-loop) advances past both consumed pairs — no extra i++ needed
   }
-  return matches;
+  // if odd number of pairs, last pair has no opponent → sitting out
+  const sittingOut=pairs.length%2===1?[...pairs[pairs.length-1]]:[];
+  return {matches,sittingOut};
 }
 
 function generateAllZufallRounds(){
@@ -2460,12 +2460,15 @@ function generateAllZufallRounds(){
     if(zufallSameGender){
       const {pairs:mPairs,sittingOut:mSit}=_makeOptimalPairs([...zufallMen]);
       const {pairs:wPairs,sittingOut:wSit}=_makeOptimalPairs([...zufallWomen]);
-      matches=[..._pairsToMatches(mPairs,'m'),..._pairsToMatches(wPairs,'w')];
-      sittingOut=[...mSit,...wSit];
+      const {matches:mM,sittingOut:mPS}=_pairsToMatches(mPairs,'m');
+      const {matches:wM,sittingOut:wPS}=_pairsToMatches(wPairs,'w');
+      matches=[...mM,...wM];
+      sittingOut=[...mSit,...wSit,...mPS,...wPS];
     } else {
       const {pairs:mixPairs,sittingOut:mixSit}=_makeMixedPairs([...zufallMen],[...zufallWomen]);
-      matches=_pairsToMatches(mixPairs,'mix');
-      sittingOut=mixSit;
+      const {matches:mixM,sittingOut:mixPS}=_pairsToMatches(mixPairs,'mix');
+      matches=mixM;
+      sittingOut=[...mixSit,...mixPS];
     }
     if(!matches.length)break;
     if(refMode==='official'&&referees.length)
@@ -2597,12 +2600,15 @@ function generateMoreZufallRounds(){
     if(zufallSameGender){
       const {pairs:mPairs,sittingOut:mSit}=_makeOptimalPairs([...zufallMen]);
       const {pairs:wPairs,sittingOut:wSit}=_makeOptimalPairs([...zufallWomen]);
-      matches=[..._pairsToMatches(mPairs,'m'),..._pairsToMatches(wPairs,'w')];
-      sittingOut=[...mSit,...wSit];
+      const {matches:mM,sittingOut:mPS}=_pairsToMatches(mPairs,'m');
+      const {matches:wM,sittingOut:wPS}=_pairsToMatches(wPairs,'w');
+      matches=[...mM,...wM];
+      sittingOut=[...mSit,...wSit,...mPS,...wPS];
     } else {
       const {pairs:mixPairs,sittingOut:mixSit}=_makeMixedPairs([...zufallMen],[...zufallWomen]);
-      matches=_pairsToMatches(mixPairs,'mix');
-      sittingOut=mixSit;
+      const {matches:mixM,sittingOut:mixPS}=_pairsToMatches(mixPairs,'mix');
+      matches=mixM;
+      sittingOut=[...mixSit,...mixPS];
     }
     if(!matches.length)break;
     if(refMode==='official'&&referees.length)
