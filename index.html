@@ -1080,29 +1080,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
   <div class="card" id="winSatzCard" style="display:none">
 
-    <h3>🏅 Sätze &amp; Gewinnsätze</h3>
-
-    <div style="margin-bottom:16px">
-
-      <div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">Sätze pro Match</div>
-
-      <div class="winsatz-stepper-row">
-
-        <div class="fields-stepper">
-
-          <button class="stepper-btn" id="numSatzDown" onclick="changeNumSatz(-1)">−</button>
-
-          <div class="fields-val" id="numSatzVal">3</div>
-
-          <button class="stepper-btn" id="numSatzUp" onclick="changeNumSatz(1)">+</button>
-
-        </div>
-
-        <div class="fields-lbl">Maximale Sätze pro Spiel</div>
-
-      </div>
-
-    </div>
+    <h3>🏅 Gewinnsätze (Best-Of)</h3>
 
     <div class="winsatz-toggle-row">
 
@@ -2124,18 +2102,6 @@ function setMode(m){
 
 ============================================================ */
 
-function changeNumSatz(d){
-
-  if(started)return;
-
-  scoring.numSets=Math.max(1,Math.min(9,scoring.numSets+d));
-
-  if(scoring.winSets>scoring.numSets)scoring.winSets=scoring.numSets;
-
-  updateWinSatzUI();
-
-}
-
 function toggleWinSatz(){
 
   if(started)return;
@@ -2175,18 +2141,6 @@ function updateWinSatzUI(){
   const tog=document.getElementById('winSatzToggle');
 
   const enabled=tog&&tog.checked;
-
-  const numDown=document.getElementById('numSatzDown');
-
-  const numUp=document.getElementById('numSatzUp');
-
-  const numVal=document.getElementById('numSatzVal');
-
-  if(numVal)numVal.textContent=scoring.numSets;
-
-  if(numDown)numDown.disabled=started||scoring.numSets<=1;
-
-  if(numUp)numUp.disabled=started||scoring.numSets>=9;
 
   if(val)val.textContent=enabled?(scoring.winSets||2):2;
 
@@ -2264,6 +2218,8 @@ function renderScoringSettings(){
 
       <div class="scoring-item"><label>Match-Verloren (0 Sätze)</label><input type="number" min="0" max="99" value="${scoring.gs.matchLoss}" id="sc-gs-ml" oninput="updateScoring()"></div>
 
+      <div class="scoring-item"><label>Sätze pro Match</label><input type="number" min="1" max="9" value="${scoring.numSets}" id="sc-gs-sets" oninput="updateScoring()"></div>
+
     </div>`;
 
   }
@@ -2299,6 +2255,14 @@ function updateScoring(){
     scoring.gs.matchNearLoss=parseInt(document.getElementById('sc-gs-mnl')?.value)||0;
 
     scoring.gs.matchLoss=parseInt(document.getElementById('sc-gs-ml')?.value)||0;
+
+    const ns=Math.max(1,Math.min(9,parseInt(document.getElementById('sc-gs-sets')?.value)||3));
+
+    scoring.numSets=ns;
+
+    if(scoring.winSets>ns)scoring.winSets=ns;
+
+    updateWinSatzUI();
 
   }
 
