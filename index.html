@@ -1118,25 +1118,6 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
     </div>
 
-    <div id="winSatzInputWrap" style="display:none">
-
-      <div class="winsatz-stepper-row">
-
-        <div class="fields-stepper">
-
-          <button class="stepper-btn" id="winSatzDown" onclick="changeWinSatz(-1)" disabled="">−</button>
-
-          <div class="fields-val" id="winSatzVal">2</div>
-
-          <button class="stepper-btn" id="winSatzUp" onclick="changeWinSatz(1)" disabled="">+</button>
-
-        </div>
-
-        <div class="fields-lbl" id="winSatzDesc">Gewinnsätze zum Sieg</div>
-
-      </div>
-
-    </div>
 
     <div id="winSatzInfo" class="alert alert-info" style="margin-top:0;margin-bottom:0">Es werden immer alle <b>3 Sätze</b> gespielt.</div>
 
@@ -1474,13 +1455,13 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
 
-      <div class="gui-scale-val" id="guiScaleVal">3</div>
+      <div class="gui-scale-val" id="guiScaleVal">5</div>
 
       <div style="flex:1;min-width:200px">
 
-        <input type="range" min="1" max="5" step="1" value="3" id="guiScaleSlider" oninput="setGuiScale(this.value)">
+        <input type="range" min="1" max="9" step="1" value="5" id="guiScaleSlider" oninput="setGuiScale(this.value)">
 
-        <div class="gui-scale-labels"><span>Klein (1)</span><span>Normal (3)</span><span>Gross (5)</span></div>
+        <div class="gui-scale-labels"><span>Winzig (1)</span><span>Normal (5)</span><span>Maximal (9)</span></div>
 
       </div>
 
@@ -1750,9 +1731,9 @@ function switchTab(tab){
 
 ============================================================ */
 
-const guiScaleMap={1:.75,2:.875,3:1.0,4:1.15,5:1.3};
+const guiScaleMap={1:.5,2:.64,3:.78,4:.92,5:1.07,6:1.25,7:1.45,8:1.68,9:1.95};
 
-const guiScaleLabels={1:'Klein (1) — 10px',2:'Klein-Mittel (2) — 12px',3:'Normal (3) — 14px',4:'Gross (4) — 16px',5:'Sehr Gross (5) — 18px'};
+const guiScaleLabels={1:'Winzig (1) — ~7px',2:'Sehr Klein (2) — ~9px',3:'Klein (3) — ~11px',4:'Klein-Mittel (4) — ~13px',5:'Normal (5) — 15px',6:'Gross (6) — ~17px',7:'Sehr Gross (7) — ~20px',8:'Riesig (8) — ~24px',9:'Maximal (9) — ~27px'};
 
 function setGuiScale(v){
 
@@ -2142,21 +2123,9 @@ function toggleWinSatz(){
 
   const en=document.getElementById('winSatzToggle').checked;
 
-  document.getElementById('winSatzInputWrap').style.display=en?'block':'none';
-
   if(!en){scoring.winSets=0;}
 
-  else{scoring.winSets=Math.max(1,Math.min(scoring.numSets,scoring.winSets||2));}
-
-  updateWinSatzUI();
-
-}
-
-function changeWinSatz(d){
-
-  if(started)return;
-
-  scoring.winSets=Math.max(1,Math.min(scoring.numSets,(scoring.winSets||1)+d));
+  else{scoring.winSets=Math.ceil(scoring.numSets/2);}
 
   updateWinSatzUI();
 
@@ -2164,13 +2133,7 @@ function changeWinSatz(d){
 
 function updateWinSatzUI(){
 
-  const val=document.getElementById('winSatzVal');
-
   const info=document.getElementById('winSatzInfo');
-
-  const down=document.getElementById('winSatzDown');
-
-  const up=document.getElementById('winSatzUp');
 
   const tog=document.getElementById('winSatzToggle');
 
@@ -2188,11 +2151,7 @@ function updateWinSatzUI(){
 
   if(numUp)numUp.disabled=started||scoring.numSets>=9;
 
-  if(val)val.textContent=enabled?(scoring.winSets||2):2;
-
-  if(down)down.disabled=(!enabled||scoring.winSets<=1);
-
-  if(up)up.disabled=(!enabled||scoring.winSets>=scoring.numSets);
+  if(enabled)scoring.winSets=Math.ceil(scoring.numSets/2);
 
   if(!enabled||scoring.winSets===0){
 
@@ -2200,7 +2159,7 @@ function updateWinSatzUI(){
 
   } else {
 
-    const bestOf=scoring.winSets===1?1:(scoring.winSets*2-1);
+    const bestOf=scoring.winSets*2-1;
 
     if(info)info.innerHTML='Spiel endet sobald ein Team <b>'+scoring.winSets+' Sätze</b> gewonnen hat (Best of '+bestOf+'). Max. <b>'+scoring.numSets+' Sätze</b>.';
 
@@ -6073,7 +6032,7 @@ function stopUserSync(){
 
   try{const t=localStorage.getItem('fb_theme');if(t)setTheme(t);else setTheme('dark');}catch(e){setTheme('dark');}
 
-  try{const s=localStorage.getItem('fb_guiscale');if(s)setGuiScale(parseInt(s));else setGuiScale(3);}catch(e){setGuiScale(3);}
+  try{const s=localStorage.getItem('fb_guiscale');if(s)setGuiScale(parseInt(s));else setGuiScale(5);}catch(e){setGuiScale(5);}
 
   try{const bg=localStorage.getItem('fb_bgtheme');if(bg)setBgTheme(bg);else setBgTheme('standard');}catch(e){setBgTheme('standard');}
 
