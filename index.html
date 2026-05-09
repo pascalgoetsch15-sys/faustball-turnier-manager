@@ -614,7 +614,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
 .sess-screen{position:fixed;inset:0;background:rgba(10,12,16,.97);backdrop-filter:blur(8px);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px}
 
-.sess-modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px 32px;width:100%;max-width:440px;box-shadow:0 24px 80px rgba(0,0,0,.6)}
+.sess-modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px 32px;width:100%;max-width:600px;box-shadow:0 24px 80px rgba(0,0,0,.6)}
 
 .sess-logo{font-family:'Bebas Neue',sans-serif;font-size:2.8rem;letter-spacing:5px;color:var(--accent);text-align:center;line-height:1}
 
@@ -634,13 +634,13 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
 .sess-content.active{display:block}
 
-.sess-session-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sess-session-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:all .18s;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 
 .sess-session-card:hover,.sess-session-card.sel{border-color:var(--accent);background:rgba(249,115,22,.08)}
 
 .sess-card-name{font-weight:600;font-size:.92rem}
 
-.sess-card-meta{font-size:.73rem;color:var(--muted);margin-top:2px}
+.sess-card-meta{font-size:.73rem;color:var(--muted);margin-top:2px;word-break:break-all}
 
 .sess-code-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:14px;text-align:center}
 
@@ -5145,7 +5145,7 @@ async function renderAdminUsersList(){
 
       </div>
 
-      ${btns?`<div style="flex-shrink:0;display:flex;align-items:center;gap:4px">${btns}</div>`:''}
+      ${btns?`<div style="flex-shrink:0;display:flex;align-items:flex-start;flex-wrap:wrap;gap:4px;padding-top:2px">${btns}</div>`:''}
 
     </div>`;
 
