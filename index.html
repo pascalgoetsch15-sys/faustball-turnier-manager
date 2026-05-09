@@ -460,6 +460,14 @@ button{padding:11px 20px;border-radius:8px;border:none;cursor:pointer;font-famil
 
 .theme-card:hover:not(.sel){border-color:var(--muted)}
 
+.bg-swatches{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+
+.bg-swatch{width:38px;height:38px;border-radius:10px;border:2px solid transparent;cursor:pointer;transition:all .2s;outline:none;position:relative}
+
+.bg-swatch.sel{border-color:var(--accent);box-shadow:0 0 0 2px rgba(249,115,22,.3)}
+
+.bg-swatch:hover:not(.sel){border-color:var(--muted)}
+
 .gui-scale-val{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--accent);min-width:40px;text-align:center}
 
 .gui-scale-labels{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);margin-top:4px}
@@ -852,9 +860,43 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
       <div style="font-size:.72rem;color:var(--muted);margin-top:4px">Passwort wird über Google verwaltet.</div>
 
+      <div style="border-top:1px solid var(--border);margin-top:18px;padding-top:16px">
+
+        <div style="font-size:.7rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Erscheinungsbild</div>
+
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+
+          <button style="flex:1;padding:9px;border-radius:8px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s" id="sys-tdark" onclick="setTheme('dark')">🌙 Dark</button>
+
+          <button style="flex:1;padding:9px;border-radius:8px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s" id="sys-tlight" onclick="setTheme('light')">☀️ Light</button>
+
+        </div>
+
+        <div style="font-size:.7rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;margin-top:14px">Hintergrundfarbe (Dark Mode)</div>
+
+        <div class="bg-swatches" style="margin-top:0">
+
+          <button class="bg-swatch sel" id="sys-bgt-standard" onclick="setBgTheme('standard')" title="Standard" style="background:#0a0c10"></button>
+
+          <button class="bg-swatch" id="sys-bgt-schwarz" onclick="setBgTheme('schwarz')" title="Schwarz" style="background:#050505"></button>
+
+          <button class="bg-swatch" id="sys-bgt-blau" onclick="setBgTheme('blau')" title="Nacht-Blau" style="background:#060c18"></button>
+
+          <button class="bg-swatch" id="sys-bgt-gruen" onclick="setBgTheme('gruen')" title="Nacht-Grün" style="background:#06100a"></button>
+
+          <button class="bg-swatch" id="sys-bgt-lila" onclick="setBgTheme('lila')" title="Nacht-Lila" style="background:#0c0814"></button>
+
+          <button class="bg-swatch" id="sys-bgt-grau" onclick="setBgTheme('grau')" title="Dunkelgrau" style="background:#111111"></button>
+
+        </div>
+
+        <div id="sys-bgThemeLabel" style="font-size:.75rem;color:var(--muted);margin-top:6px">Standard</div>
+
+      </div>
+
     </div>
 
- 
+
 
     <!-- Admin (Superadmin + System-Operatoren) -->
 
@@ -1378,6 +1420,30 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
     </div>
 
+    <div style="margin-top:18px">
+
+      <div style="font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Hintergrundfarbe (Dark Mode)</div>
+
+      <div class="bg-swatches">
+
+        <button class="bg-swatch sel" id="bgt-standard" onclick="setBgTheme('standard')" title="Standard" style="background:#0a0c10"></button>
+
+        <button class="bg-swatch" id="bgt-schwarz" onclick="setBgTheme('schwarz')" title="Schwarz" style="background:#050505"></button>
+
+        <button class="bg-swatch" id="bgt-blau" onclick="setBgTheme('blau')" title="Nacht-Blau" style="background:#060c18"></button>
+
+        <button class="bg-swatch" id="bgt-gruen" onclick="setBgTheme('gruen')" title="Nacht-Grün" style="background:#06100a"></button>
+
+        <button class="bg-swatch" id="bgt-lila" onclick="setBgTheme('lila')" title="Nacht-Lila" style="background:#0c0814"></button>
+
+        <button class="bg-swatch" id="bgt-grau" onclick="setBgTheme('grau')" title="Dunkelgrau" style="background:#111111"></button>
+
+      </div>
+
+      <div id="bgThemeLabel" style="font-size:.75rem;color:var(--muted);margin-top:6px">Standard</div>
+
+    </div>
+
   </div>
 
   <div class="card">
@@ -1898,7 +1964,63 @@ function setTheme(t){
 
   document.getElementById('tlight').classList.toggle('sel',t==='light');
 
+  const sd=document.getElementById('sys-tdark'),sl=document.getElementById('sys-tlight');
+
+  if(sd)sd.style.borderColor=t==='dark'?'var(--accent)':'var(--border)';
+
+  if(sl)sl.style.borderColor=t==='light'?'var(--accent)':'var(--border)';
+
   try{localStorage.setItem('fb_theme',t);}catch(e){}
+
+}
+
+const _bgThemes={
+
+  standard:{bg:'#0a0c10',surface:'#12151c',surface2:'#1a1f2b',border:'#252d3d',label:'Standard'},
+
+  schwarz: {bg:'#050505',surface:'#0e0e0e',surface2:'#171717',border:'#222222',label:'Schwarz'},
+
+  blau:    {bg:'#060c18',surface:'#0d1525',surface2:'#152035',border:'#1e2f48',label:'Nacht-Blau'},
+
+  gruen:   {bg:'#06100a',surface:'#0d1a10',surface2:'#14241a',border:'#1d3324',label:'Nacht-Grün'},
+
+  lila:    {bg:'#0c0814',surface:'#14101e',surface2:'#1c162b',border:'#2a1f3e',label:'Nacht-Lila'},
+
+  grau:    {bg:'#111111',surface:'#1a1a1a',surface2:'#222222',border:'#303030',label:'Dunkelgrau'},
+
+};
+
+function setBgTheme(name){
+
+  const t=_bgThemes[name]||_bgThemes.standard;
+
+  const r=document.documentElement.style;
+
+  r.setProperty('--bg',t.bg);
+
+  r.setProperty('--surface',t.surface);
+
+  r.setProperty('--surface2',t.surface2);
+
+  r.setProperty('--border',t.border);
+
+  document.querySelectorAll('.bg-swatch').forEach(el=>{
+
+    const id=el.id.replace(/^sys-/,'');
+
+    el.classList.toggle('sel',id==='bgt-'+name);
+
+  });
+
+  const lbl=document.getElementById('bgThemeLabel');
+
+  if(lbl)lbl.textContent=t.label;
+
+  const lbl2=document.getElementById('sys-bgThemeLabel');
+
+  if(lbl2)lbl2.textContent=t.label;
+
+  try{localStorage.setItem('fb_bgtheme',name);}catch(e){}
 
 }
 
@@ -5916,6 +6038,8 @@ function stopUserSync(){
   try{const t=localStorage.getItem('fb_theme');if(t)setTheme(t);else setTheme('dark');}catch(e){setTheme('dark');}
 
   try{const s=localStorage.getItem('fb_guiscale');if(s)setGuiScale(parseInt(s));else setGuiScale(3);}catch(e){setGuiScale(3);}
+
+  try{const bg=localStorage.getItem('fb_bgtheme');if(bg)setBgTheme(bg);else setBgTheme('standard');}catch(e){setBgTheme('standard');}
 
   setMode('roundrobin');
 
