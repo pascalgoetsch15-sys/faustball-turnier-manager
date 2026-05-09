@@ -2528,11 +2528,11 @@ function renderZufallMatches(){
     html+=`<div class="round-section-title">Runde ${ri+1} <span class="badge ${roundDone?'badge-done':'badge-pending'}">${roundDone?'Abgeschlossen':'Laufend'}</span></div>`;
     let infoBar='';
     if(round.sittingOut&&round.sittingOut.length){
-      const names=round.sittingOut.map(p=>'<span class="chip-name">'+esc(p.name)+'</span>').join('');
+      const names=round.sittingOut.map(p=>'<span class="chip-name">'+esc(p.name)+(p.gender==='m'?' ♂':p.gender==='w'?' ♀':'')+'</span>').join('');
       infoBar+='<div class="info-chip pause"><span>⏸</span><span><span class="chip-label">PAUSE</span><span class="chip-names">'+names+'</span></span></div>';
     }
     if(refMode==='official'){
-      const refs=round.matches.map((m,i)=>m.officialRef?'<span class="chip-name">Feld '+(i+1)+': '+esc(m.officialRef)+'</span>':'').filter(Boolean).join('');
+      const refs=round.matches.map((m,i)=>m.officialRef?'<span class="chip-name">Feld '+(i+1)+(m.gender==='m'?' ♂':m.gender==='w'?' ♀':' ⚤')+': '+esc(m.officialRef)+'</span>':'').filter(Boolean).join('');
       if(refs)infoBar+='<div class="info-chip ref"><span>🟣</span><span><span class="chip-label">SCHIRI</span><span class="chip-names">'+refs+'</span></span></div>';
     }
     html+='<div class="slot-group '+(isLast&&!roundDone?'slot-active':'')+(roundDone?' slot-done':'')+'">'+
@@ -5923,13 +5923,17 @@ async function registerParticipant(code,role){
 
   const key=emailToKey(currentUser.email);
 
-  await fbDb.ref('session_data/'+code+'/participants/'+key).set({username:currentUser.username,role,joinedAt:Date.now()});
+  const actualRole=currentUser.email===SUPERADMIN_EMAIL?'admin':role;
+
+  await fbDb.ref('session_data/'+code+'/participants/'+key).set({username:currentUser.username,role:actualRole,joinedAt:Date.now()});
 
 }
 
 async function setParticipantRole(email,role){
 
   if(userRole!=='admin'||!sessionId)return;
+
+  if(email===SUPERADMIN_EMAIL)return;
 
   const key=emailToKey(email);
 
@@ -5967,9 +5971,11 @@ async function renderParticipants(){
 
     const isMe=key===myEmailKey;
 
-    const roleLbl=p.role==='admin'?'Admin':p.role==='operator'?'Operator':'Nutzer';
+    const isSysOwner=email===SUPERADMIN_EMAIL;
 
-    const roleColor=p.role==='admin'?'var(--accent)':p.role==='operator'?'#a78bfa':'#38bdf8';
+    const roleLbl=isSysOwner?'👑 System-Owner':p.role==='admin'?'Admin':p.role==='operator'?'Operator':'Nutzer';
+
+    const roleColor=isSysOwner?'#f59e0b':p.role==='admin'?'var(--accent)':p.role==='operator'?'#a78bfa':'#38bdf8';
 
     const safeEmail=email.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 
@@ -5985,7 +5991,7 @@ async function renderParticipants(){
 
       </div>
 
-      ${!isMe&&p.role!=='admin'?`<div class="team-item-btns">
+      ${!isMe&&p.role!=='admin'&&!isSysOwner?`<div class="team-item-btns">
 
         ${p.role==='user'?`<button onclick="setParticipantRole('${safeEmail}','operator')" style="background:rgba(168,139,250,.15);border:1px solid rgba(168,139,250,.4);color:#a78bfa;border-radius:6px;padding:3px 8px;font-size:.7rem;cursor:pointer">⬆ Operator</button>`:''}
 
@@ -6373,9 +6379,11 @@ function applyRole(role){
 
   if(badge){
 
-    badge.textContent=isAdmin?'⚙ Admin':isOperator?'🔧 Operator':'👁 Nutzer';
+    const isSysOwner=currentUser?.email===SUPERADMIN_EMAIL;
 
-    badge.className='role-pill '+(isOperator?'operator':role);
+    badge.textContent=isSysOwner&&isAdmin?'👑 System-Owner':isAdmin?'⚙ Admin':isOperator?'🔧 Operator':'👁 Nutzer';
+
+    badge.className='role-pill '+(isSysOwner&&isAdmin?'superadmin':isOperator?'operator':role);
 
   }
 
