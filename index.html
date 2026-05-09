@@ -2125,7 +2125,7 @@ function toggleWinSatz(){
 
   if(!en){scoring.winSets=0;}
 
-  else{scoring.winSets=Math.ceil(scoring.numSets/2);}
+  else{scoring.winSets=scoring.numSets;}
 
   updateWinSatzUI();
 
@@ -2151,7 +2151,7 @@ function updateWinSatzUI(){
 
   if(numUp)numUp.disabled=started||scoring.numSets>=9;
 
-  if(enabled)scoring.winSets=Math.ceil(scoring.numSets/2);
+  if(enabled)scoring.winSets=scoring.numSets;
 
   if(!enabled||scoring.winSets===0){
 
