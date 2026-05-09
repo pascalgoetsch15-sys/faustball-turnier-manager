@@ -1072,6 +1072,16 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
       </div>
 
+      <div class="mode-card" id="mode-zufall" onclick="setMode('zufall')">
+
+        <div class="mc-icon">🎲</div>
+
+        <div class="mc-name">Zufall</div>
+
+        <div class="mc-desc">Einzelspieler bilden rotierende Zufalls-Paare. Jeder spielt mit jedem.</div>
+
+      </div>
+
     </div>
 
   </div>
@@ -1292,6 +1302,56 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
     </div>
 
     <div id="teamList" class="team-list"><p style="color:var(--muted);font-size:.86rem;padding:6px 0">Noch keine Teams.</p></div>
+
+  </div>
+
+  <div class="card" id="zufall-players-card" style="display:none">
+
+    <h3>👤 Spieler eintragen</h3>
+
+    <div class="settings-row" style="padding:10px 0 14px;border-bottom:1px solid var(--border);margin-bottom:14px">
+
+      <div><div class="sr-label">Gleiches Geschlecht zusammen</div><div class="sr-desc">Mann+Mann oder Frau+Frau · Aus: Mann+Frau</div></div>
+
+      <label class="toggle-sw"><input type="checkbox" id="zufall-same-gender" checked onchange="toggleZufallGender()"><span class="toggle-track"></span></label>
+
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+
+      <div>
+
+        <div style="font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">♂ Männer</div>
+
+        <div class="input-row" style="margin-bottom:8px">
+
+          <input type="text" id="zufall-inp-m" placeholder="Name eingeben..." maxlength="30" onkeydown="if(event.key==='Enter')addZufallPlayer('m')" style="font-size:.88rem">
+
+          <button class="btn-primary" onclick="addZufallPlayer('m')" style="padding:8px 12px;white-space:nowrap">+</button>
+
+        </div>
+
+        <div id="zufall-men-list"><p style="color:var(--muted);font-size:.84rem">Noch keine Männer.</p></div>
+
+      </div>
+
+      <div>
+
+        <div style="font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">♀ Frauen</div>
+
+        <div class="input-row" style="margin-bottom:8px">
+
+          <input type="text" id="zufall-inp-w" placeholder="Name eingeben..." maxlength="30" onkeydown="if(event.key==='Enter')addZufallPlayer('w')" style="font-size:.88rem">
+
+          <button class="btn-primary" onclick="addZufallPlayer('w')" style="padding:8px 12px;white-space:nowrap">+</button>
+
+        </div>
+
+        <div id="zufall-women-list"><p style="color:var(--muted);font-size:.84rem">Noch keine Frauen.</p></div>
+
+      </div>
+
+    </div>
 
   </div>
 
@@ -1671,7 +1731,12 @@ let groupMatches=[],placementRounds=[];
 
 let tournamentFinished=false,guiScale=3;
 
- 
+// Zufall mode state
+let zufallMen=[],zufallWomen=[],zufallSameGender=true;
+let zufallRounds=[]; // [{matches:[{id,a:[],aNames:[],b:[],bNames:[],scoreA,scoreB,done,gender}]}]
+let zufallPartnerCount={};  // {pid:{pid:n}} – wie oft zusammengespielt
+let zufallOpponentCount={}; // {pid:{pid:n}} – wie oft gegeneinander gespielt
+let zufallPlayerIdCounter=0;
 
 // Endspurt state
 
@@ -2091,7 +2156,7 @@ function setMode(m){
 
   gameMode=m;
 
-  ['roundrobin','gruppenzeit','gruppensaetze'].forEach(k=>{
+  ['roundrobin','gruppenzeit','gruppensaetze','zufall'].forEach(k=>{
 
     const el=document.getElementById('mode-'+k);
 
@@ -2103,6 +2168,8 @@ function setMode(m){
 
   const isSaetze=m==='gruppensaetze';
 
+  const isZufall=m==='zufall';
+
   document.getElementById('winSatzCard').style.display=isSaetze?'block':'none';
 
   document.getElementById('groupSettingsCard').style.display=isGroup?'block':'none';
@@ -2110,6 +2177,14 @@ function setMode(m){
   document.getElementById('maxConsecCard').style.display=isGroup?'block':'none';
 
   document.getElementById('cooldownCard').style.display=m==='roundrobin'?'block':'none';
+
+  document.getElementById('teamCard').style.display=isZufall?'none':'';
+
+  document.getElementById('zufall-players-card').style.display=isZufall?'':'none';
+
+  document.getElementById('scoringCard').style.display=isZufall?'none':'';
+
+  if(isZufall)renderZufallPlayers();
 
   renderScoringSettings();
 
@@ -2198,6 +2273,281 @@ function updateWinSatzUI(){
 function renderWinSatzSelector(){updateWinSatzUI();}
 
 function setWinSatz(v){scoring.winSets=v;updateWinSatzUI();}
+
+/* ============================================================
+   ZUFALL MODE
+============================================================ */
+
+function addZufallPlayer(gender){
+  if(started)return;
+  const inp=document.getElementById('zufall-inp-'+gender);
+  if(!inp)return;
+  const name=inp.value.trim();
+  if(!name)return;
+  const arr=gender==='m'?zufallMen:zufallWomen;
+  if(arr.find(p=>p.name===name)){alert('Spieler bereits vorhanden!');return;}
+  const p={id:'zp'+(++zufallPlayerIdCounter),name,gender};
+  arr.push(p);
+  zufallPartnerCount[p.id]={};
+  zufallOpponentCount[p.id]={};
+  inp.value='';
+  renderZufallPlayers();
+  updateStartCard();
+  saveSessionState();
+}
+
+function removeZufallPlayer(id,gender){
+  if(started)return;
+  if(gender==='m')zufallMen=zufallMen.filter(p=>p.id!==id);
+  else zufallWomen=zufallWomen.filter(p=>p.id!==id);
+  delete zufallPartnerCount[id];
+  delete zufallOpponentCount[id];
+  renderZufallPlayers();
+  updateStartCard();
+  saveSessionState();
+}
+
+function toggleZufallGender(){
+  const tog=document.getElementById('zufall-same-gender');
+  if(tog)zufallSameGender=tog.checked;
+  updateStartCard();
+}
+
+function renderZufallPlayers(){
+  const menEl=document.getElementById('zufall-men-list');
+  const womenEl=document.getElementById('zufall-women-list');
+  const fmt=(arr,g)=>arr.length
+    ?arr.map((p,i)=>`<div class="team-item"><div class="team-item-left"><span class="team-rank">${i+1}</span><span style="font-size:.88rem">${esc(p.name)}</span></div>${!started?`<button class="btn-danger btn-sm" onclick="removeZufallPlayer('${p.id}','${g}')">×</button>`:''}</div>`).join('')
+    :`<p style="color:var(--muted);font-size:.84rem">Noch keine ${g==='m'?'Männer':'Frauen'}.</p>`;
+  if(menEl)menEl.innerHTML=fmt(zufallMen,'m');
+  if(womenEl)womenEl.innerHTML=fmt(zufallWomen,'w');
+}
+
+function _zufallPairCost(a,b){
+  return (zufallPartnerCount[a.id]?.[b.id]||0)+(zufallPartnerCount[b.id]?.[a.id]||0);
+}
+
+function _zufallOpponentCost(pairA,pairB){
+  let c=0;
+  for(const a of pairA)for(const b of pairB)
+    c+=(zufallOpponentCount[a.id]?.[b.id]||0)+(zufallOpponentCount[b.id]?.[a.id]||0);
+  return c;
+}
+
+function _makeOptimalPairs(players){
+  // Greedy: for each unmatched player, pick partner with lowest shared-play count
+  const avail=[...players];
+  const pairs=[];
+  while(avail.length>=2){
+    const first=avail.shift();
+    let bestIdx=0,bestCost=Infinity;
+    for(let i=0;i<avail.length;i++){
+      const c=_zufallPairCost(first,avail[i]);
+      if(c<bestCost){bestCost=c;bestIdx=i;}
+    }
+    pairs.push([first,avail.splice(bestIdx,1)[0]]);
+  }
+  return pairs;
+}
+
+function _makeMixedPairs(men,women){
+  // Pair each man with woman minimizing shared-play count
+  const availW=[...women];
+  const pairs=[];
+  const shuffledM=[...men].sort(()=>Math.random()-.5);
+  for(const man of shuffledM){
+    if(!availW.length)break;
+    let bestIdx=0,bestCost=Infinity;
+    for(let i=0;i<availW.length;i++){
+      const c=_zufallPairCost(man,availW[i]);
+      if(c<bestCost){bestCost=c;bestIdx=i;}
+    }
+    pairs.push([man,availW.splice(bestIdx,1)[0]]);
+  }
+  return pairs;
+}
+
+function _pairsToMatches(pairs,genderTag){
+  const matches=[];
+  for(let i=0;i+1<pairs.length;i+=2){
+    const pA=pairs[i],pB=pairs[i+1];
+    // Try to pick opponent pair that minimises opponent-repetition
+    let bestJ=i+1,bestCost=_zufallOpponentCost(pA,pairs[i+1]);
+    for(let j=i+2;j<pairs.length-((pairs.length-i)%2===0?0:1);j+=2){
+      const c=_zufallOpponentCost(pA,pairs[j]);
+      if(c<bestCost){bestCost=c;bestJ=j;}
+    }
+    // swap pairs[i+1] and pairs[bestJ]
+    if(bestJ!==i+1){const tmp=pairs[i+1];pairs[i+1]=pairs[bestJ];pairs[bestJ]=tmp;}
+    matches.push({
+      id:'zrm'+Date.now()+'-'+i+'-'+Math.random().toString(36).slice(2,6),
+      a:pairs[i].map(p=>p.id),
+      aNames:pairs[i].map(p=>p.name),
+      b:pairs[i+1].map(p=>p.id),
+      bNames:pairs[i+1].map(p=>p.name),
+      scoreA:null,scoreB:null,done:false,gender:genderTag
+    });
+    i++; // skip next pair since it was used
+  }
+  return matches;
+}
+
+function generateZufallRound(){
+  if(!started)return;
+  let matches=[];
+  if(zufallSameGender){
+    const mPairs=_makeOptimalPairs([...zufallMen]);
+    const wPairs=_makeOptimalPairs([...zufallWomen]);
+    matches=[..._pairsToMatches(mPairs,'m'),..._pairsToMatches(wPairs,'w')];
+  } else {
+    const mixPairs=_makeMixedPairs([...zufallMen],[...zufallWomen]);
+    matches=_pairsToMatches(mixPairs,'mix');
+  }
+  if(!matches.length){alert('Nicht genug Spieler für eine Runde (mind. 4).');return;}
+  zufallRounds.push({matches});
+  renderZufallMatches();
+  renderZufallStandings();
+  saveSessionState();
+}
+
+function _updateZufallHistory(match){
+  const inc=(obj,a,b)=>{if(!obj[a])obj[a]={};obj[a][b]=(obj[a][b]||0)+1;};
+  if(match.a.length===2){inc(zufallPartnerCount,match.a[0],match.a[1]);inc(zufallPartnerCount,match.a[1],match.a[0]);}
+  if(match.b.length===2){inc(zufallPartnerCount,match.b[0],match.b[1]);inc(zufallPartnerCount,match.b[1],match.b[0]);}
+  for(const a of match.a)for(const b of match.b){
+    inc(zufallOpponentCount,a,b);inc(zufallOpponentCount,b,a);
+  }
+}
+
+function submitZufallScore(matchId,roundIdx){
+  const saEl=document.getElementById('zsa-'+matchId);
+  const sbEl=document.getElementById('zsb-'+matchId);
+  if(!saEl||!sbEl)return;
+  const sa=parseInt(saEl.value),sb=parseInt(sbEl.value);
+  if(isNaN(sa)||isNaN(sb)||sa<0||sb<0){alert('Bitte gültige Punktzahlen eingeben.');return;}
+  const round=zufallRounds[roundIdx];if(!round)return;
+  const match=round.matches.find(m=>m.id===matchId);if(!match||match.done)return;
+  match.scoreA=sa;match.scoreB=sb;match.done=true;
+  _updateZufallHistory(match);
+  renderZufallMatches();
+  renderZufallStandings();
+  saveSessionState();
+}
+
+function reopenZufallMatch(matchId,roundIdx){
+  const round=zufallRounds[roundIdx];if(!round)return;
+  const match=round.matches.find(m=>m.id===matchId);if(!match)return;
+  match.done=false;match.scoreA=null;match.scoreB=null;
+  renderZufallMatches();
+  renderZufallStandings();
+  saveSessionState();
+}
+
+function renderZufallMatches(){
+  const el=document.getElementById('matchesContent');if(!el)return;
+  if(!zufallRounds.length){
+    el.innerHTML='<div class="empty">Runde 1 wird nach dem Start generiert.</div>';return;
+  }
+  const allRoundsDone=zufallRounds.every(r=>r.matches.every(m=>m.done));
+  let html='';
+  zufallRounds.forEach((round,ri)=>{
+    const isLast=ri===zufallRounds.length-1;
+    const roundDone=round.matches.every(m=>m.done);
+    html+=`<div class="round-section-title">Runde ${ri+1} <span class="badge ${roundDone?'badge-done':'badge-pending'}">${roundDone?'Abgeschlossen':'Laufend'}</span></div>`;
+    html+='<div class="slot-group '+(isLast&&!roundDone?'slot-active':'')+(roundDone?' slot-done':'')+'">';
+    round.matches.forEach(m=>{
+      const aName=m.aNames.join(' &amp; ');
+      const bName=m.bNames.join(' &amp; ');
+      const gTag=m.gender==='m'?'<span style="font-size:.65rem;color:var(--muted)">♂</span>':m.gender==='w'?'<span style="font-size:.65rem;color:var(--muted)">♀</span>':'<span style="font-size:.65rem;color:var(--muted)">⚤</span>';
+      html+=`<div class="match-card${m.done?' match-done':''}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:.88rem">${aName} ${gTag}</div>
+            <div style="color:var(--muted);font-size:.75rem;margin:2px 0">vs</div>
+            <div style="font-weight:600;font-size:.88rem">${bName}</div>
+          </div>
+          ${m.done
+            ?`<div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--accent);letter-spacing:2px">${m.scoreA} : ${m.scoreB}</div>
+                ${isLast?`<button onclick="reopenZufallMatch('${m.id}',${ri})" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:2px 8px;font-size:.7rem;cursor:pointer">✏ Ändern</button>`:''}
+              </div>`
+            :`<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+                <input type="number" min="0" id="zsa-${m.id}" placeholder="0" style="width:52px;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 4px;font-size:.95rem">
+                <span style="color:var(--muted)">:</span>
+                <input type="number" min="0" id="zsb-${m.id}" placeholder="0" style="width:52px;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 4px;font-size:.95rem">
+                <button class="btn-primary" onclick="submitZufallScore('${m.id}',${ri})" style="padding:6px 12px">OK</button>
+              </div>`}
+        </div>
+      </div>`;
+    });
+    html+='</div>';
+    if(isLast&&roundDone){
+      html+=`<div style="text-align:center;margin:12px 0">
+        <button class="btn-primary" onclick="generateZufallRound()" style="padding:10px 28px">+ Neue Runde generieren</button>
+      </div>`;
+    }
+  });
+  el.innerHTML=html;
+}
+
+function getZufallStandings(){
+  const all=[...zufallMen,...zufallWomen];
+  const st={};
+  all.forEach(p=>{st[p.id]={id:p.id,name:p.name,gender:p.gender,pts:0,won:0,lost:0,drawn:0,sf:0,sa:0,played:0};});
+  zufallRounds.forEach(r=>r.matches.forEach(m=>{
+    if(!m.done)return;
+    const upd=(ids,sf,sa,res)=>ids.forEach(pid=>{
+      if(!st[pid])return;
+      st[pid].sf+=sf;st[pid].sa+=sa;st[pid].played++;
+      if(res==='w'){st[pid].pts+=scoring.rr.win;st[pid].won++;}
+      else if(res==='l'){st[pid].pts+=scoring.rr.loss;st[pid].lost++;}
+      else{st[pid].pts+=scoring.rr.draw;st[pid].drawn++;}
+    });
+    if(m.scoreA>m.scoreB){upd(m.a,m.scoreA,m.scoreB,'w');upd(m.b,m.scoreB,m.scoreA,'l');}
+    else if(m.scoreB>m.scoreA){upd(m.a,m.scoreA,m.scoreB,'l');upd(m.b,m.scoreB,m.scoreA,'w');}
+    else{upd(m.a,m.scoreA,m.scoreB,'d');upd(m.b,m.scoreB,m.scoreA,'d');}
+  }));
+  return Object.values(st).sort((a,b)=>{
+    if(b.pts!==a.pts)return b.pts-a.pts;
+    const diff=(b.sf-b.sa)-(a.sf-a.sa);
+    if(diff!==0)return diff;
+    return b.sf-a.sf;
+  });
+}
+
+function renderZufallStandings(){
+  const el=document.getElementById('standingsContent');if(!el)return;
+  const st=getZufallStandings();
+  if(!st.length){el.innerHTML='<div class="empty">Noch keine Ergebnisse.</div>';return;}
+  const roundsDone=zufallRounds.filter(r=>r.matches.every(m=>m.done)).length;
+  let html=`<div class="stat-row" style="margin-bottom:16px">
+    <div class="stat-box"><div class="val">${zufallRounds.length}</div><div class="lbl">Runden</div></div>
+    <div class="stat-box"><div class="val">${roundsDone}</div><div class="lbl">Abgeschlossen</div></div>
+    <div class="stat-box"><div class="val">${zufallMen.length+zufallWomen.length}</div><div class="lbl">Spieler</div></div>
+  </div>
+  <table class="standings-table"><thead><tr>
+    <th>#</th><th>Spieler</th><th>Sp</th>
+    <th style="color:var(--accent)">Pkt</th>
+    <th style="color:var(--win)">S</th><th>U</th><th style="color:var(--loss)">N</th>
+    <th>+</th><th>−</th>
+  </tr></thead><tbody>`;
+  st.forEach((p,i)=>{
+    const gIcon=p.gender==='m'?'♂':'♀';
+    html+=`<tr>
+      <td style="font-weight:700">${i+1}</td>
+      <td>${esc(p.name)} <span style="font-size:.65rem;color:var(--muted)">${gIcon}</span></td>
+      <td>${p.played}</td>
+      <td style="font-weight:700;color:var(--accent)">${p.pts}</td>
+      <td style="color:var(--win)">${p.won}</td>
+      <td>${p.drawn}</td>
+      <td style="color:var(--loss)">${p.lost}</td>
+      <td>${p.sf}</td>
+      <td>${p.sa}</td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  el.innerHTML=html;
+}
 
 /* ============================================================
 
@@ -2629,11 +2979,37 @@ function updateStartCard(){
 
     const isGroup=gameMode==='gruppenzeit'||gameMode==='gruppensaetze';
 
-    info.textContent=isGroup?'Turnier läuft — '+getModeLabel()+' — '+numGroups+' Gruppe'+(numGroups>1?'n':''):
+    const isZufall=gameMode==='zufall';
+
+    info.textContent=isZufall?'Turnier läuft — Zufall — '+(zufallMen.length+zufallWomen.length)+' Spieler':
+
+      isGroup?'Turnier läuft — '+getModeLabel()+' — '+numGroups+' Gruppe'+(numGroups>1?'n':''):
 
       'Turnier läuft — Runde '+currentRound+' — '+numFields+' Felder';
 
     btn.style.display='none';return;
+
+  }
+
+  if(gameMode==='zufall'){
+
+    const total=zufallMen.length+zufallWomen.length;
+
+    const ok=zufallSameGender?(zufallMen.length>=4||zufallWomen.length>=4):(total>=4&&zufallMen.length>=2&&zufallWomen.length>=2);
+
+    if(!ok){
+
+      info.className='alert alert-warn';
+
+      info.textContent=zufallSameGender?'Mindestens 4 Männer oder 4 Frauen benötigt.':'Mindestens 2 Männer + 2 Frauen benötigt.';
+
+      info.style.display='block';btn.style.display='none';return;
+
+    }
+
+    info.style.display='none';btn.style.display='';
+
+    btn.textContent='Zufall-Turnier starten';return;
 
   }
 
@@ -2665,7 +3041,7 @@ function updateStartCard(){
 
 function getModeLabel(){
 
-  return{roundrobin:'Schoch',gruppenzeit:'Gruppen · Zeitwertung',gruppensaetze:'Gruppen · Satzwertung'}[gameMode]||gameMode;
+  return{roundrobin:'Schoch',gruppenzeit:'Gruppen · Zeitwertung',gruppensaetze:'Gruppen · Satzwertung',zufall:'Zufall'}[gameMode]||gameMode;
 
 }
 
@@ -2678,6 +3054,34 @@ function getModeLabel(){
 ============================================================ */
 
 function startTournament(){
+
+  if(gameMode==='zufall'){
+
+    const ok=zufallSameGender?(zufallMen.length>=4||zufallWomen.length>=4):(zufallMen.length>=2&&zufallWomen.length>=2);
+
+    if(!ok)return;
+
+    started=true;tournamentFinished=false;
+
+    zufallRounds=[];
+
+    zufallPartnerCount={};zufallOpponentCount={};
+
+    [...zufallMen,...zufallWomen].forEach(p=>{zufallPartnerCount[p.id]={};zufallOpponentCount[p.id]={};});
+
+    updateHeaderBadge();applyStartedLock();updateStartCard();
+
+    generateZufallRound();
+
+    renderZufallPlayers();
+
+    saveSessionState();
+
+    switchTab('matches');
+
+    return;
+
+  }
 
   const isGroup=gameMode==='gruppenzeit'||gameMode==='gruppensaetze';
 
@@ -2732,6 +3136,10 @@ function resetTournament(){
   groups=[];groupMatches=[];placementRounds=[];groupPhase='group';
 
   tournamentFinished=false;endspurtActive=false;endspurtTarget=0;
+
+  zufallRounds=[];zufallPartnerCount={};zufallOpponentCount={};
+
+  [...zufallMen,...zufallWomen].forEach(p=>{zufallPartnerCount[p.id]={};zufallOpponentCount[p.id]={};});
 
   teams.forEach(t=>{matchHistory[t.id]={};refHistory[t.id]=0;teamPlayCount[t.id]=0;});
 
@@ -3615,6 +4023,8 @@ function renderMatches(){
   if(!el)return;
 
   if(!started){el.innerHTML='<div class="empty">Noch kein Turnier gestartet.</div>';return;}
+
+  if(gameMode==='zufall'){renderZufallMatches();return;}
 
   if(gameMode==='gruppenzeit'||gameMode==='gruppensaetze'){renderGroupMatches();return;}
 
@@ -4640,7 +5050,11 @@ function renderStandings(){
 
   if(!el)return;
 
-  if(!started||!teams.length){el.innerHTML='<div class="empty">Noch kein Turnier gestartet.</div>';return;}
+  if(!started){el.innerHTML='<div class="empty">Noch kein Turnier gestartet.</div>';return;}
+
+  if(gameMode==='zufall'){renderZufallStandings();return;}
+
+  if(!teams.length){el.innerHTML='<div class="empty">Noch kein Turnier gestartet.</div>';return;}
 
   if(gameMode==='gruppenzeit'||gameMode==='gruppensaetze'){renderGroupStandings();return;}
 
@@ -4916,7 +5330,7 @@ function applyStartedLock(){
 
   // Add lock overlays to lockable cards if not already present
 
-  ['scoringCard','winSatzCard','groupSettingsCard','maxConsecCard','cooldownCard'].forEach(id=>{
+  ['scoringCard','winSatzCard','groupSettingsCard','maxConsecCard','cooldownCard','zufall-players-card'].forEach(id=>{
 
     const c=document.getElementById(id);
 
@@ -5944,7 +6358,11 @@ function saveSessionState(){
 
     tournamentFinished,endspurtActive,endspurtTarget,
 
-    teamIdCounter,slotGlobalCounter
+    teamIdCounter,slotGlobalCounter,
+
+    zufallMen,zufallWomen,zufallSameGender,zufallRounds,
+
+    zufallPartnerCount,zufallOpponentCount,zufallPlayerIdCounter
 
   };
 
@@ -5979,6 +6397,20 @@ function loadSessionState(st){
   endspurtActive=st.endspurtActive||false;endspurtTarget=st.endspurtTarget||0;
 
   teamIdCounter=st.teamIdCounter||0;slotGlobalCounter=st.slotGlobalCounter||0;
+
+  zufallMen=st.zufallMen||[];zufallWomen=st.zufallWomen||[];
+
+  zufallSameGender=st.zufallSameGender!==undefined?st.zufallSameGender:true;
+
+  zufallRounds=st.zufallRounds||[];
+
+  zufallPartnerCount=st.zufallPartnerCount||{};zufallOpponentCount=st.zufallOpponentCount||{};
+
+  zufallPlayerIdCounter=st.zufallPlayerIdCounter||0;
+
+  const zGTog=document.getElementById('zufall-same-gender');
+
+  if(zGTog)zGTog.checked=zufallSameGender;
 
 }
 
