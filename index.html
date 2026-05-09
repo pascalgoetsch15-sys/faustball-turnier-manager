@@ -5467,7 +5467,7 @@ function applyStartedLock(){
 
   // Add lock overlays to lockable cards if not already present
 
-  ['scoringCard','winSatzCard','groupSettingsCard','maxConsecCard','cooldownCard','zufall-players-card'].forEach(id=>{
+  ['scoringCard','winSatzCard','groupSettingsCard','maxConsecCard','cooldownCard'].forEach(id=>{
 
     const c=document.getElementById(id);
 
@@ -6565,12 +6565,20 @@ function refreshAllViews(){
 
   setMode(gameMode);setRefMode(refMode);
 
-  // setMode returns early when started=true; restore Zufall card visibility manually
-  if(started&&gameMode==='zufall'){
-    document.getElementById('teamCard').style.display='none';
-    document.getElementById('zufall-players-card').style.display='';
-    document.getElementById('scoringCard').style.display='';
-    renderZufallPlayers();
+  // setMode returns early when started=true; restore UI manually
+  if(started){
+    // Update mode selector highlight
+    ['roundrobin','gruppenzeit','gruppensaetze','zufall'].forEach(k=>{
+      const el=document.getElementById('mode-'+k);
+      if(el)el.classList.toggle('sel',k===gameMode);
+    });
+    // Zufall: card visibility and player list
+    if(gameMode==='zufall'){
+      document.getElementById('teamCard').style.display='none';
+      document.getElementById('zufall-players-card').style.display='';
+      document.getElementById('scoringCard').style.display='';
+      renderZufallPlayers();
+    }
     applyStartedLock();
   }
 
