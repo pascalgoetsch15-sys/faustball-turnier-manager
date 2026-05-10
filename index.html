@@ -3730,70 +3730,65 @@ function allGroupMatchesDone(){
 
 }
 
+function bracketRoundLabel(mc){
+  if(mc===1)return '🏆 Finale';
+  if(mc===2)return 'Halbfinale';
+  if(mc===4)return 'Viertelfinale';
+  if(mc===8)return 'Achtelfinale';
+  if(mc===16)return '1/16 Finale';
+  return '1/'+mc+' Finale';
+}
+
 function generatePlacementRounds(){
-
   groupPhase='placement';placementRounds=[];
-
-  const ranked=groups.map((_,i)=>getGroupStandings(i));
-
-  const maxRank=Math.max(...groups.map(g=>g.length));
 
   if(numGroups<=1){groupPhase='done';return;}
 
-  if(numGroups===2){
-
-    for(let rank=maxRank;rank>=3;rank--){
-
-      const teamsAtRank=ranked.map(g=>g[rank-1]).filter(Boolean);
-
-      if(teamsAtRank.length<2)continue;
-
-      placementRounds.push({id:rid(),label:'Platz '+(rank-1)+'/'+rank+' Spiel',rankBracket:rank,
-
-        matches:[createPlacementMatch(teamsAtRank[0].id,teamsAtRank[1].id,rank)],done:false});
-
+  // Collect seeds interleaved by rank: A1,B1,C1,...,A2,B2,...
+  const ranked=groups.map((_,i)=>getGroupStandings(i));
+  const maxRank=Math.max(...groups.map(g=>g.length));
+  const seeds=[];
+  for(let rank=0;rank<maxRank;rank++){
+    for(let gi=0;gi<numGroups;gi++){
+      if(ranked[gi][rank])seeds.push(ranked[gi][rank].id);
     }
+  }
 
-    const a1=ranked[0]?.[0],a2=ranked[0]?.[1],b1=ranked[1]?.[0],b2=ranked[1]?.[1];
+  const n=seeds.length;
+  if(n<2){groupPhase='done';return;}
 
-    if(a1&&b2&&b1&&a2){
+  // Find next power of 2
+  let B=1;while(B<n)B*=2;
+  const byes=B-n;
 
-      placementRounds.push({id:rid(),label:'Halbfinale',rankBracket:'semi',
+  // Top seeds get byes, lower seeds play round 0
+  const byeTeams=seeds.slice(0,byes);
+  const playing=seeds.slice(byes);
 
-        matches:[createPlacementMatch(a1.id,b2.id,'semi1'),createPlacementMatch(b1.id,a2.id,'semi2')],done:false,isSemi:true});
+  const label=bracketRoundLabel(B/2);
+  const byeNote=byes>0?` (${byes} Freilos${byes>1?'e':''})`:'';
+  const isSemi0=B/2===2;
 
-      placementRounds.push({id:rid(),label:'Finale & Platz 3',rankBracket:'final',matches:[],done:false,isFinal:true,placeholder:true});
-
-    }
-
-  } else {
-
-    for(let rank=maxRank;rank>=1;rank--){
-
-      const teamsAtRank=ranked.map(g=>g[rank-1]).filter(Boolean);
-
-      if(teamsAtRank.length<2)continue;
-
-      const matches=[];
-
-      for(let i=0;i<teamsAtRank.length;i++)
-
-        for(let j=i+1;j<teamsAtRank.length;j++)
-
-          matches.push(createPlacementMatch(teamsAtRank[i].id,teamsAtRank[j].id,rank));
-
-      placementRounds.push({id:rid(),label:rank===1?'Finale':'Platz '+((rank-1)*numGroups+1)+'/'+rank*numGroups,
-
-        rankBracket:rank,matches,done:false,teamsAtRank:teamsAtRank.map(t=>t.id)});
-
-    }
-
+  const matches=[];
+  for(let i=0;i<playing.length/2;i++){
+    const m=createPlacementMatch(playing[i],playing[playing.length-1-i],'r0m'+i);
+    m.crossLabel=label;
+    matches.push(m);
   }
 
   let seq=groupMatches.length+1;
+  matches.forEach((m,fi)=>{m.seqNum=seq++;m.fieldNum=fi+1;});
 
-  placementRounds.forEach(pr=>{pr.matches.forEach((m,fi)=>{m.seqNum=seq++;m.fieldNum=fi+1;});});
+  const r0={
+    id:rid(),label:label+byeNote,rankBracket:'r0',
+    isKnockout:true,bracketRound:0,bracketSize:B,
+    byeTeams,matches,done:matches.length===0,placeholder:false,
+    isSemi:isSemi0,isFinal:B===2
+  };
+  placementRounds.push(r0);
 
+  // If all byes (no real matches in round 0), advance immediately
+  if(matches.length===0)tryAdvanceKnockout();
 }
 
 function createPlacementMatch(aId,bId,bracket){
@@ -3826,32 +3821,64 @@ function computeMatchSlots(matches){
 
 }
 
-function tryGenerateFinals(){
+function tryAdvanceKnockout(){
+  const kr=placementRounds.filter(pr=>pr.isKnockout&&!pr.is3rd);
+  if(!kr.length)return;
 
-  const semiRound=placementRounds.find(r=>r.isSemi);
+  // Find last done round that hasn't been advanced yet
+  let lastDoneIdx=-1;
+  for(let i=kr.length-1;i>=0;i--){if(kr[i].done){lastDoneIdx=i;break;}}
+  if(lastDoneIdx<0)return;
+  if(lastDoneIdx<kr.length-1)return; // next round already exists
 
-  const finalRound=placementRounds.find(r=>r.isFinal);
+  const round=kr[lastDoneIdx];
+  if(round.isFinal)return; // nothing after Final
 
-  if(!semiRound||!finalRound||!semiRound.matches.every(m=>m.done)||finalRound.matches.length>0)return;
+  const winners=round.matches.map(m=>matchWinnerLoser(m)[0]);
+  const losers=round.matches.map(m=>matchWinnerLoser(m)[1]);
+  const advancing=[...(round.byeTeams||[]),...winners];
 
-  const s1=semiRound.matches[0],s2=semiRound.matches[1];
+  if(advancing.length<2){groupPhase='done';return;}
 
-  const[w1,l1]=matchWinnerLoser(s1);
+  const half=Math.floor(advancing.length/2);
+  const nextLabel=bracketRoundLabel(half);
+  const isSemiNext=half===2;
+  const isFinalNext=half===1;
 
-  const[w2,l2]=matchWinnerLoser(s2);
+  const nextMatches=[];
+  for(let i=0;i<half;i++){
+    const m=createPlacementMatch(advancing[i],advancing[advancing.length-1-i],'r'+(lastDoneIdx+1)+'m'+i);
+    m.crossLabel=nextLabel;
+    nextMatches.push(m);
+  }
 
-  let seq=groupMatches.length+placementRounds.flatMap(r=>r.matches).length+1;
+  let seq=groupMatches.length+placementRounds.filter(pr=>!pr.is3rd).flatMap(r=>r.matches).length+1;
+  nextMatches.forEach((m,fi)=>{m.seqNum=seq++;m.fieldNum=fi+1;});
 
-  finalRound.matches=[
+  const nextRound={
+    id:rid(),label:nextLabel,rankBracket:isFinalNext?'final':'r'+(lastDoneIdx+1),
+    isKnockout:true,bracketRound:lastDoneIdx+1,bracketSize:round.bracketSize,
+    byeTeams:[],matches:nextMatches,done:false,placeholder:false,
+    isSemi:isSemiNext,isFinal:isFinalNext
+  };
 
-    {...createPlacementMatch(w1,w2,'final'),crossLabel:'🏆 Finale',seqNum:seq,fieldNum:1},
+  // Insert before any 3rd place round
+  const i3=placementRounds.findIndex(pr=>pr.is3rd);
+  if(i3>=0)placementRounds.splice(i3,0,nextRound);
+  else placementRounds.push(nextRound);
 
-    {...createPlacementMatch(l1,l2,'3rd'),crossLabel:'🥉 Platz 3',seqNum:seq+1,fieldNum:2}
-
-  ];
-
-  finalRound.placeholder=false;
-
+  // Generate 3rd place when coming from semis (2 matches done → losers known)
+  if(round.matches.length===2&&!placementRounds.find(pr=>pr.is3rd)){
+    const m3=createPlacementMatch(losers[0],losers[1],'3rd');
+    m3.crossLabel='🥉 Platz 3';
+    let seq3=groupMatches.length+placementRounds.filter(pr=>!pr.is3rd).flatMap(r=>r.matches).length+1;
+    m3.seqNum=seq3;m3.fieldNum=2;
+    placementRounds.push({
+      id:rid(),label:'🥉 Platz 3',rankBracket:'3rd',
+      isKnockout:true,bracketRound:'extra',bracketSize:round.bracketSize,
+      byeTeams:[],matches:[m3],done:false,placeholder:false,is3rd:true
+    });
+  }
 }
 
 function matchWinnerLoser(m){
@@ -4737,7 +4764,7 @@ function renderGroupMatches(){
 
   if(allGroupMatchesDone()&&groupPhase==='group'){
 
-    if(userRole!=='user')html+='<div class="round-actions"><div class="round-actions-label">Nächste Phase</div><button class="btn-next-round" onclick="startPlacementPhase()">⚡ Platzierungsrunden generieren</button><button class="beenden-btn" onclick="finishTournament()">🏁 Turnier beenden</button></div>';
+    if(userRole!=='user')html+='<div class="round-actions"><div class="round-actions-label">Nächste Phase</div><button class="btn-next-round" onclick="startPlacementPhase()">⚡ Kreuzspiele generieren</button><button class="beenden-btn" onclick="finishTournament()">🏁 Turnier beenden</button></div>';
 
   } else if(!allGroupMatchesDone()&&groupPhase==='group'){
 
@@ -4746,49 +4773,44 @@ function renderGroupMatches(){
   }
 
   if(placementRounds.length>0){
+    html+=`<div class="group-stage-section"><div class="group-stage-header">Kreuzspiele <span class="phase-badge phase-place">K.O.-Runde</span></div>`;
 
-    html+='<div class="group-stage-section"><div class="group-stage-header">Platzierungsrunden <span class="phase-badge phase-place">Alle gleichzeitig · Finale zuletzt</span></div>';
-
-    placementRounds.forEach((pr,pri)=>{
-
-      if(pr.placeholder){
-
-        html+='<div class="placement-section" style="opacity:.5;border-style:dashed"><div class="placement-title" style="color:var(--draw)">'+(pr.label||'Finale & Platz 3')+' — wird nach Halbfinale generiert</div></div>';
-
-        return;
-
-      }
+    placementRounds.forEach(pr=>{
+      if(pr.placeholder)return;
 
       const roundDone=pr.matches.length>0&&pr.matches.every(m=>m.done);
-
       if(roundDone&&!pr.done)pr.done=true;
 
-      const isFinale=pr.isFinal||pr.label==='Finale';
-
-      const roundCanPlay=!pr.placeholder&&!roundDone&&(isFinale?placementRounds.slice(0,pri).every(r=>r.done||r.placeholder):true);
-
-      const prSlots=roundCanPlay?computeMatchSlots(pr.matches):[];
-
+      const prSlots=!roundDone?computeMatchSlots(pr.matches):[];
       const firstActiveSlot=prSlots.findIndex(slot=>!slot.every(m=>m.done));
-
       const isActive=firstActiveSlot>=0;
 
       html+=`<div class="placement-section" style="border-color:${roundDone?'rgba(34,197,94,.3)':isActive?'rgba(249,115,22,.3)':'var(--border)'}">`;
-
       html+=`<div class="placement-title" style="color:${roundDone?'var(--win)':isActive?'var(--accent)':'var(--text)'}">${pr.label} <span class="badge ${roundDone?'badge-done':'badge-pending'}">${pr.matches.filter(m=>m.done).length}/${pr.matches.length} fertig</span></div>`;
 
-      if(pr.isSemi)html+='<div class="alert alert-cooldown" style="margin-bottom:12px;font-size:.8rem">🏆 Kreuzspiele: Sieger ins Finale, Verlierer um Platz 3.</div>';
+      if(pr.byeTeams&&pr.byeTeams.length>0){
+        html+=`<div style="font-size:.79rem;color:var(--muted);margin-bottom:10px">🎟 Freilos (direkt weiter): <b>${pr.byeTeams.map(id=>esc(tname(id))).join(', ')}</b></div>`;
+      }
+      if(pr.isSemi&&!pr.is3rd){
+        html+='<div class="alert alert-cooldown" style="margin-bottom:12px;font-size:.8rem">🏆 Kreuzspiele: Sieger kommen ins Finale – Verlierer spielen um Platz 3.</div>';
+      }
 
-      html+='<div class="fields-grid">'+pr.matches.map(m=>{const si=prSlots.findIndex(s=>s.some(x=>x.id===m.id));return groupMatchCard(m,si>=0&&si===firstActiveSlot);}).join('')+'</div></div>';
-
-      if(pr.isSemi&&roundDone){tryGenerateFinals();}
-
+      html+='<div class="fields-grid">'+pr.matches.map(m=>{
+        const si=prSlots.findIndex(s=>s.some(x=>x.id===m.id));
+        return groupMatchCard(m,si>=0&&si===firstActiveSlot);
+      }).join('')+'</div></div>';
     });
 
+    // Upcoming round placeholder
+    const _krList=placementRounds.filter(pr=>pr.isKnockout&&!pr.is3rd);const lastKR=_krList[_krList.length-1];
+    if(lastKR&&!lastKR.isFinal&&!lastKR.done){
+      const advCount=(lastKR.matches.length)+(lastKR.byeTeams?.length||0);
+      const nextLabel=bracketRoundLabel(Math.floor(advCount/2));
+      html+=`<div class="placement-section" style="opacity:.42;border-style:dashed"><div class="placement-title" style="color:var(--muted)">${nextLabel} — wird nach ${lastKR.label.split('(')[0].trim()} generiert</div></div>`;
+    }
+
     html+='</div>';
-
     if(userRole!=='user')html+='<div class="round-actions"><div class="round-actions-label">Turnier-Aktionen</div><button class="beenden-btn" onclick="finishTournament()">🏁 Turnier beenden</button></div>';
-
   }
 
   el.innerHTML=html;
@@ -5299,13 +5321,8 @@ function findGroupMatch(id){
 }
 
 function checkPlacementRoundDone(){
-
   placementRounds.forEach(pr=>{if(!pr.placeholder&&pr.matches.length>0&&pr.matches.every(m=>m.done))pr.done=true;});
-
-  const semiRound=placementRounds.find(r=>r.isSemi);
-
-  if(semiRound&&semiRound.done)tryGenerateFinals();
-
+  tryAdvanceKnockout();
 }
 
 function reopenGroupMatch(id){
