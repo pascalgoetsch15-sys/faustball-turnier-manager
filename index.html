@@ -2523,7 +2523,7 @@ function renderZufallMatches(){
     el.innerHTML='<div class="empty">Noch keine Runden generiert.</div>';return;
   }
   const allDone=zufallRounds.every(r=>r.matches.every(m=>m.done));
-  let html='';
+  let html=renderZufallSlotOverview();
   zufallRounds.forEach((round,ri)=>{
     const isLast=ri===zufallRounds.length-1;
     const roundDone=round.matches.every(m=>m.done);
@@ -3258,7 +3258,7 @@ function clearLocalState(){
   gameMode='roundrobin';
   numGroups=2;maxConsecutive=2;
   scoring={rr:{win:2,draw:1,loss:0},gz:{win:2,draw:1,loss:0},gs:{matchWin:3,matchDraw:1,matchLoss:0,matchNearLoss:1},numSets:3,winSets:2};
-  rounds=[];currentRound=0;started=false;slotGlobalCounter=0;
+  rounds=[];currentRound=0;started=false;slotGlobalCounter=0;teamIdCounter=0;
   matchHistory={};refHistory={};teamPlayCount={};
   groups=[];groupPhase='group';groupMatches=[];placementRounds=[];
   tournamentFinished=false;endspurtActive=false;endspurtTarget=0;
@@ -4511,7 +4511,43 @@ function renderSlotOverview(){
 
 }
 
- 
+function renderZufallSlotOverview(){
+  if(!zufallRounds.length)return '';
+  const maxF=Math.max(...zufallRounds.map(r=>r.matches.length));
+  if(!maxF)return '';
+  const hasRef=refMode!=='none';
+  const firstActive=zufallRounds.findIndex(r=>!r.matches.every(m=>m.done));
+  let html='<div class="slot-overview"><div class="slot-overview-head">📋 Zeitplan-Übersicht</div>';
+  html+='<div style="overflow-x:auto"><table class="slot-table"><thead><tr><th>#</th>';
+  for(let f=1;f<=maxF;f++){
+    html+=`<th>Feld ${f}</th>`;
+    if(hasRef)html+=`<th style="color:var(--ref)">🟣 Schiri</th>`;
+  }
+  html+='<th style="color:var(--pause)">⏸ Pause</th></tr></thead><tbody>';
+  zufallRounds.forEach((round,ri)=>{
+    const allDone=round.matches.every(m=>m.done);
+    const rowClass=allDone?'st-done':(ri===firstActive?'st-active':'');
+    html+=`<tr class="${rowClass}"><td class="st-nr">${ri+1}${allDone?' <span style="color:var(--win)">✓</span>':''}</td>`;
+    for(let f=0;f<maxF;f++){
+      const m=round.matches[f];
+      if(m){
+        const gTag=m.gender==='m'?' ♂':m.gender==='w'?' ♀':' ⚤';
+        const score=m.done?` <span style="font-size:.72rem;color:var(--win)">${m.scoreA}:${m.scoreB}</span>`:'';
+        html+=`<td class="st-match"><span style="font-size:.7rem;color:var(--muted)">${gTag}</span> ${esc(m.aNames.join(' & '))} – ${esc(m.bNames.join(' & '))}${score}</td>`;
+        if(hasRef)html+=`<td class="st-ref">${m.officialRef?esc(m.officialRef):'—'}</td>`;
+      } else {
+        html+='<td>—</td>';
+        if(hasRef)html+='<td>—</td>';
+      }
+    }
+    const pauseNames=round.sittingOut.map(p=>esc(p.name)+(p.gender==='m'?' ♂':p.gender==='w'?' ♀':'')).join(', ');
+    html+=`<td class="st-pause">${pauseNames||'—'}</td></tr>`;
+  });
+  html+='</tbody></table></div></div>';
+  return html;
+}
+
+
 
 /* ============================================================
 
@@ -6239,6 +6275,7 @@ async function createSession(){
 
   await fbDb.ref('session_data/'+code).set({name,pw,state:null,updatedAt:Date.now()});
 
+  stopUserSync();
   clearLocalState();
   timerDur=15*60;timerRem=15*60;clearInterval(timerInterval);timerInterval=null;timerRunning=false;
 
