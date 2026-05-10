@@ -5925,6 +5925,26 @@ function stopLastSeenHeartbeat(){
   if(_lastSeenInterval){clearInterval(_lastSeenInterval);_lastSeenInterval=null;}
 }
 
+let _banListener=null;
+function startBanListener(email){
+  if(email===SUPERADMIN_EMAIL)return;
+  stopBanListener();
+  const key=emailToKey(email);
+  _banListener=fbDb.ref('bannedEmails/'+key).on('value',snap=>{
+    const ban=snap.val();
+    if(!ban)return;
+    if(ban.bannedUntil&&Date.now()>ban.bannedUntil)return;
+    fbAuth.signOut();
+  });
+}
+function stopBanListener(){
+  if(_banListener&&currentUser){
+    const key=emailToKey(currentUser.email);
+    fbDb.ref('bannedEmails/'+key).off('value',_banListener);
+  }
+  _banListener=null;
+}
+
 async function checkEmailBan(email){
   if(email===SUPERADMIN_EMAIL)return null;
   const key=emailToKey(email);
@@ -6008,11 +6028,13 @@ fbAuth.onAuthStateChanged(async firebaseUser=>{
     const cu={email:userData.email,username:userData.username,role:userData.role};
     currentUser=cu;
     startLastSeenHeartbeat(key);
+    startBanListener(firebaseUser.email);
     initSessionsListener();
     onAuthSuccess(cu);
   }else{
     currentUser=null;
     stopLastSeenHeartbeat();
+    stopBanListener();
     stopSessionsListener();
     document.getElementById('authScreen').style.display='flex';
     document.getElementById('sessionStartScreen').style.display='none';
