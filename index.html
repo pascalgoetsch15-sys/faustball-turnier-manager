@@ -2954,7 +2954,8 @@ function renderCooldownUI(){
 
 function setRefMode(m){
 
-  if(started)return;
+  // Non-zufall modes: lock after start. Zufall: allow mid-tournament refMode changes.
+  if(started&&gameMode!=='zufall')return;
 
   refMode=m;
 
@@ -2973,6 +2974,19 @@ function setRefMode(m){
   };
 
   document.getElementById('refModeInfo').innerHTML=info[m];
+
+  // Zufall mid-tournament: retroactively update officialRef for all existing rounds
+  if(started&&gameMode==='zufall'){
+    zufallRounds.forEach(round=>{
+      round.matches.forEach(ma=>{delete ma.officialRef;});
+      if(m==='team')
+        round.sittingOut.forEach((p,i)=>{if(i<round.matches.length)round.matches[i].officialRef=p.name;});
+      else if(m==='official'&&referees.length)
+        round.matches.forEach((ma,i)=>{ma.officialRef=referees[i%referees.length];});
+    });
+    renderZufallMatches();
+    saveSessionState();
+  }
 
 }
 
