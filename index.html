@@ -4513,7 +4513,7 @@ function renderSlotOverview(){
 
         const dot=c?`<span class="grp-dot" style="background:${c}"></span>`:'';
 
-        const score=m.done?` <span style="font-size:.72rem;color:var(--win)">${m.scoreA}:${m.scoreB}</span>`:'';
+        let score='';if(m.done){if(gameMode==='gruppensaetze'&&m.sets&&m.sets.length){let aw=0,bw=0;(m.sets||[]).forEach(([sa,sb])=>{if(sa>sb)aw++;else if(sb>sa)bw++;});score=` <span style="font-size:.72rem;color:var(--win)">${aw}:${bw}</span>`;}else{score=` <span style="font-size:.72rem;color:var(--win)">${m.scoreA}:${m.scoreB}</span>`;}}
 
         html+=`<td class="st-match">${dot}${esc(tname(m.teamAId))} – ${esc(tname(m.teamBId))}${score}</td>`;
 
