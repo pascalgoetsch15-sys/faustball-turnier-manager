@@ -235,6 +235,12 @@ button{padding:11px 20px;border-radius:8px;border:none;cursor:pointer;font-famil
 .slot-title{font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:var(--text);letter-spacing:1px}
 
 .slot-info-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:13px}
+.zufall-assign-bar{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:13px;display:flex;flex-direction:column;gap:5px}
+.zab-row{display:flex;align-items:center;gap:9px;font-size:.83rem}
+.zab-field{font-family:'Bebas Neue',sans-serif;font-size:.88rem;letter-spacing:1px;min-width:56px;flex-shrink:0;color:var(--muted)}
+.zab-name{font-weight:600}
+.zab-ref-row{color:var(--ref)}
+.zab-pause-row{color:var(--pause)}
 
 .info-chip{display:inline-flex;align-items:center;gap:8px;border-radius:10px;padding:9px 14px;font-size:.85rem;font-weight:600}
 
@@ -2528,17 +2534,31 @@ function renderZufallMatches(){
     const isLast=ri===zufallRounds.length-1;
     const roundDone=round.matches.every(m=>m.done);
     html+=`<div class="round-section-title">Runde ${ri+1} <span class="badge ${roundDone?'badge-done':'badge-pending'}">${roundDone?'Abgeschlossen':'Laufend'}</span></div>`;
-    let infoBar='';
-    if(round.sittingOut&&round.sittingOut.length){
-      const names=round.sittingOut.map(p=>'<span class="chip-name">'+esc(p.name)+(p.gender==='m'?' ♂':p.gender==='w'?' ♀':'')+'</span>').join('');
-      infoBar+='<div class="info-chip pause"><span>⏸</span><span><span class="chip-label">PAUSE</span><span class="chip-names">'+names+'</span></span></div>';
+    const hasSit=round.sittingOut&&round.sittingOut.length>0;
+    const assignRows=[];
+    if(refMode!=='none'){
+      round.matches.forEach((m,fi)=>{
+        const refPlayer=hasSit?round.sittingOut.find(p=>p.name===m.officialRef):null;
+        const gTag=refPlayer?(refPlayer.gender==='m'?' ♂':refPlayer.gender==='w'?' ♀':''):'';
+        if(m.officialRef){
+          assignRows.push(`<div class="zab-row zab-ref-row"><span class="zab-field">Feld ${fi+1}</span><span>🟣</span><span class="zab-name">${esc(m.officialRef)}${gTag}</span></div>`);
+        } else {
+          assignRows.push(`<div class="zab-row zab-ref-row" style="opacity:.4"><span class="zab-field">Feld ${fi+1}</span><span>🟣</span><span class="zab-name" style="font-weight:400;color:var(--muted)">— kein Schiri</span></div>`);
+        }
+      });
     }
-    if(refMode==='official'||refMode==='team'){
-      const refs=round.matches.map((m,i)=>m.officialRef?'<span class="chip-name">Feld '+(i+1)+(m.gender==='m'?' ♂':m.gender==='w'?' ♀':' ⚤')+': '+esc(m.officialRef)+'</span>':'').filter(Boolean).join('');
-      if(refs)infoBar+='<div class="info-chip ref"><span>🟣</span><span><span class="chip-label">SCHIRI</span><span class="chip-names">'+refs+'</span></span></div>';
+    if(hasSit){
+      // 'team': sitting-out players 0..refCount-1 are referees, rest are pure pause
+      // 'official'/'none': all sitting-out are pure pause
+      const refCount=refMode==='team'?round.matches.filter(m=>m.officialRef).length:0;
+      const pausePlayers=round.sittingOut.slice(refCount);
+      if(pausePlayers.length){
+        const names=pausePlayers.map(p=>esc(p.name)+(p.gender==='m'?' ♂':p.gender==='w'?' ♀':'')).join(', ');
+        assignRows.push(`<div class="zab-row zab-pause-row"><span class="zab-field">PAUSE</span><span>⏸</span><span class="zab-name">${names}</span></div>`);
+      }
     }
-    html+='<div class="slot-group '+(isLast&&!roundDone?'slot-active':'')+(roundDone?' slot-done':'')+'">'+
-      (infoBar?'<div class="slot-info-bar">'+infoBar+'</div>':'');
+    const assignBar=assignRows.length?'<div class="zufall-assign-bar">'+assignRows.join('')+'</div>':'';
+    html+='<div class="slot-group '+(isLast&&!roundDone?'slot-active':'')+(roundDone?' slot-done':'')+'">'+assignBar;
     round.matches.forEach(m=>{
       const aName=m.aNames.join(' &amp; ');
       const bName=m.bNames.join(' &amp; ');
