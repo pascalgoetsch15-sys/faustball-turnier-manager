@@ -3821,18 +3821,59 @@ function computeMatchSlots(matches){
 
 }
 
+function generateConsolationGroup(teams,posLow,posHigh,bracketSize,generatedBy){
+  const n=teams.length;
+  if(n<2)return;
+  const half=Math.floor(n/2);
+  const isFinal=n===2;
+  const posEmoji=posLow===3?'🥉 ':posLow===5?'🎖 ':'';
+  const posLabel=isFinal?posEmoji+'Platz '+posLow+'/'+posHigh:'Platz '+posLow+'-'+posHigh;
+  const consKey='cons-pos'+posLow+'-by-'+generatedBy;
+  const matches=[];
+  for(let i=0;i<half;i++){
+    const m=createPlacementMatch(teams[i],teams[n-1-i],consKey+'-m'+i);
+    m.crossLabel=posLabel;
+    matches.push(m);
+  }
+  let seq=groupMatches.length+placementRounds.flatMap(r=>r.matches).length+1;
+  matches.forEach((m,fi)=>{m.seqNum=seq++;m.fieldNum=fi+1;});
+  placementRounds.push({
+    id:rid(),label:posLabel,rankBracket:consKey,
+    isKnockout:true,consolation:true,consKey,posLow,posHigh,
+    bracketSize,byeTeams:[],matches,done:false,placeholder:false,
+    generatedBy,consolationAdvanced:false
+  });
+}
+
+function tryAdvanceConsolation(consRound){
+  const n=consRound.matches.length;
+  if(n<2)return; // direct placement match — already determines positions
+  const winners=consRound.matches.map(m=>matchWinnerLoser(m)[0]);
+  const losers=consRound.matches.map(m=>matchWinnerLoser(m)[1]);
+  const{posLow,posHigh,bracketSize}=consRound;
+  // winners fight for posLow..posLow+n-1, losers for posLow+n..posHigh
+  if(winners.length>=2)generateConsolationGroup(winners,posLow,posLow+n-1,bracketSize,consRound.id);
+  if(losers.length>=2)generateConsolationGroup(losers,posLow+n,posHigh,bracketSize,consRound.id);
+}
+
+function removeRoundsGeneratedBy(roundId){
+  const children=placementRounds.filter(pr=>pr.generatedBy===roundId);
+  children.forEach(pr=>{removeRoundsGeneratedBy(pr.id);});
+  children.forEach(pr=>{const idx=placementRounds.indexOf(pr);if(idx>=0)placementRounds.splice(idx,1);});
+}
+
 function tryAdvanceKnockout(){
-  const kr=placementRounds.filter(pr=>pr.isKnockout&&!pr.is3rd);
+  const kr=placementRounds.filter(pr=>pr.isKnockout&&!pr.consolation);
   if(!kr.length)return;
 
-  // Find last done round that hasn't been advanced yet
+  // Find last done main-bracket round not yet advanced
   let lastDoneIdx=-1;
   for(let i=kr.length-1;i>=0;i--){if(kr[i].done){lastDoneIdx=i;break;}}
   if(lastDoneIdx<0)return;
-  if(lastDoneIdx<kr.length-1)return; // next round already exists
+  if(lastDoneIdx<kr.length-1)return; // next main round already exists
 
   const round=kr[lastDoneIdx];
-  if(round.isFinal)return; // nothing after Final
+  if(round.isFinal)return;
 
   const winners=round.matches.map(m=>matchWinnerLoser(m)[0]);
   const losers=round.matches.map(m=>matchWinnerLoser(m)[1]);
@@ -3852,32 +3893,21 @@ function tryAdvanceKnockout(){
     nextMatches.push(m);
   }
 
-  let seq=groupMatches.length+placementRounds.filter(pr=>!pr.is3rd).flatMap(r=>r.matches).length+1;
+  let seq=groupMatches.length+placementRounds.flatMap(r=>r.matches).length+1;
   nextMatches.forEach((m,fi)=>{m.seqNum=seq++;m.fieldNum=fi+1;});
 
-  const nextRound={
+  placementRounds.push({
     id:rid(),label:nextLabel,rankBracket:isFinalNext?'final':'r'+(lastDoneIdx+1),
-    isKnockout:true,bracketRound:lastDoneIdx+1,bracketSize:round.bracketSize,
+    isKnockout:true,consolation:false,bracketRound:lastDoneIdx+1,bracketSize:round.bracketSize,
     byeTeams:[],matches:nextMatches,done:false,placeholder:false,
-    isSemi:isSemiNext,isFinal:isFinalNext
-  };
+    isSemi:isSemiNext,isFinal:isFinalNext,generatedBy:round.id
+  });
 
-  // Insert before any 3rd place round
-  const i3=placementRounds.findIndex(pr=>pr.is3rd);
-  if(i3>=0)placementRounds.splice(i3,0,nextRound);
-  else placementRounds.push(nextRound);
-
-  // Generate 3rd place when coming from semis (2 matches done → losers known)
-  if(round.matches.length===2&&!placementRounds.find(pr=>pr.is3rd)){
-    const m3=createPlacementMatch(losers[0],losers[1],'3rd');
-    m3.crossLabel='🥉 Platz 3';
-    let seq3=groupMatches.length+placementRounds.filter(pr=>!pr.is3rd).flatMap(r=>r.matches).length+1;
-    m3.seqNum=seq3;m3.fieldNum=2;
-    placementRounds.push({
-      id:rid(),label:'🥉 Platz 3',rankBracket:'3rd',
-      isKnockout:true,bracketRound:'extra',bracketSize:round.bracketSize,
-      byeTeams:[],matches:[m3],done:false,placeholder:false,is3rd:true
-    });
+  // Generate consolation bracket for all losers of this round
+  if(losers.length>=2){
+    const posLow=advancing.length+1;
+    const posHigh=advancing.length+losers.length;
+    generateConsolationGroup(losers,posLow,posHigh,round.bracketSize,round.id);
   }
 }
 
@@ -4791,7 +4821,7 @@ function renderGroupMatches(){
       if(pr.byeTeams&&pr.byeTeams.length>0){
         html+=`<div style="font-size:.79rem;color:var(--muted);margin-bottom:10px">🎟 Freilos (direkt weiter): <b>${pr.byeTeams.map(id=>esc(tname(id))).join(', ')}</b></div>`;
       }
-      if(pr.isSemi&&!pr.is3rd){
+      if(pr.isSemi&&!pr.consolation){
         html+='<div class="alert alert-cooldown" style="margin-bottom:12px;font-size:.8rem">🏆 Kreuzspiele: Sieger kommen ins Finale – Verlierer spielen um Platz 3.</div>';
       }
 
@@ -4801,8 +4831,8 @@ function renderGroupMatches(){
       }).join('')+'</div></div>';
     });
 
-    // Upcoming round placeholder
-    const _krList=placementRounds.filter(pr=>pr.isKnockout&&!pr.is3rd);const lastKR=_krList[_krList.length-1];
+    // Upcoming round placeholder (only for main bracket)
+    const _krList=placementRounds.filter(pr=>pr.isKnockout&&!pr.consolation);const lastKR=_krList[_krList.length-1];
     if(lastKR&&!lastKR.isFinal&&!lastKR.done){
       const advCount=(lastKR.matches.length)+(lastKR.byeTeams?.length||0);
       const nextLabel=bracketRoundLabel(Math.floor(advCount/2));
@@ -5323,6 +5353,10 @@ function findGroupMatch(id){
 function checkPlacementRoundDone(){
   placementRounds.forEach(pr=>{if(!pr.placeholder&&pr.matches.length>0&&pr.matches.every(m=>m.done))pr.done=true;});
   tryAdvanceKnockout();
+  placementRounds.filter(pr=>pr.consolation&&pr.done&&!pr.consolationAdvanced).forEach(pr=>{
+    pr.consolationAdvanced=true;
+    tryAdvanceConsolation(pr);
+  });
 }
 
 function reopenGroupMatch(id){
@@ -5337,15 +5371,9 @@ function reopenGroupMatch(id){
 
     if(pr.matches.some(x=>x.id===id)){
 
-      pr.done=false;
+      pr.done=false;pr.consolationAdvanced=false;
 
-      if(pr.isSemi){
-
-        const finalRound=placementRounds.find(r=>r.isFinal);
-
-        if(finalRound){finalRound.matches=[];finalRound.placeholder=true;finalRound.done=false;}
-
-      }
+      removeRoundsGeneratedBy(pr.id);
 
       break;
 
