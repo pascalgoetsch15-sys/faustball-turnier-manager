@@ -782,7 +782,10 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
       <input type="text" id="otp-code-inp" class="sess-inp" placeholder="6-stelliger Code..." maxlength="6" inputmode="numeric" style="text-align:center;letter-spacing:6px;font-size:1.3rem;margin-bottom:8px" oninput="this.value=this.value.replace(/\D/g,'')">
       <div id="otp-verify-err" style="display:none;margin-bottom:8px" class="alert alert-danger"></div>
       <button id="otp-verify-btn" onclick="verifyEmailOtp()" style="width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:600;cursor:pointer;margin-bottom:8px">Anmelden</button>
-      <button onclick="showOtpStep1()" style="width:100%;padding:9px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.8rem;cursor:pointer">← Andere E-Mail verwenden</button>
+      <div style="display:flex;gap:8px">
+        <button id="otp-resend-btn" onclick="resendEmailOtp()" style="flex:1;padding:9px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.8rem;cursor:pointer">↺ Code erneut senden</button>
+        <button onclick="showOtpStep1()" style="flex:1;padding:9px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.8rem;cursor:pointer">← Andere E-Mail</button>
+      </div>
     </div>
 
   </div>
@@ -5741,6 +5744,28 @@ const EMAILJS_PUBLIC_KEY  = 'AcaXXiUssMCjM-a4v';
 
 function emailToKey(e){return(e||'').replace(/\./g,',').replace(/@/g,'_at_');}
 function keyToEmail(k){return(k||'').replace(/,/g,'.').replace(/_at_/g,'@');}
+
+async function resendEmailOtp(){
+  const btn=document.getElementById('otp-resend-btn');
+  const errEl=document.getElementById('otp-verify-err');
+  errEl.style.display='none';
+  btn.disabled=true;btn.textContent='Wird gesendet…';
+  try{
+    const email=(document.getElementById('otp-email-inp').value||'').trim().toLowerCase();
+    const code=Math.floor(100000+Math.random()*900000).toString();
+    const expiry=Date.now()+10*60*1000;
+    const key=emailToKey(email);
+    await fbDb.ref('otps/'+key).set({code,expiry,used:false});
+    await emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_TEMPLATE_ID,{email,passcode:code,time:'10 Minuten'},EMAILJS_PUBLIC_KEY);
+    document.getElementById('otp-code-inp').value='';
+    btn.textContent='✓ Gesendet';
+    setTimeout(()=>{btn.disabled=false;btn.textContent='↺ Code erneut senden';},30000);
+  }catch(e){
+    errEl.textContent='Fehler beim Senden: '+e.text||e.message||JSON.stringify(e);
+    errEl.style.display='block';
+    btn.disabled=false;btn.textContent='↺ Code erneut senden';
+  }
+}
 
 function showOtpStep1(){
   document.getElementById('email-otp-step1').style.display='block';
