@@ -5906,6 +5906,7 @@ function stopLastSeenHeartbeat(){
 }
 
 async function checkEmailBan(email){
+  if(email===SUPERADMIN_EMAIL)return null;
   const key=emailToKey(email);
   const snap=await fbDb.ref('bannedEmails/'+key).once('value');
   const ban=snap.val();
@@ -5926,6 +5927,7 @@ async function banEmail(){
   const errEl=document.getElementById('ban-add-err');
   errEl.style.display='none';
   if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){errEl.textContent='Bitte eine gültige E-Mail eingeben.';errEl.style.display='block';return;}
+  if(email===SUPERADMIN_EMAIL){errEl.textContent='Der System-Owner kann nicht gesperrt werden.';errEl.style.display='block';return;}
   const duration=document.getElementById('ban-duration').value;
   const reason=(document.getElementById('ban-reason-inp').value||'').trim();
   const ms=banDurationMs(duration);
