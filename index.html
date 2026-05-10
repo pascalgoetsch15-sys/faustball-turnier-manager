@@ -3996,7 +3996,9 @@ function generateRound(isFirst){
 
   const n=ordered.length;
 
-  const ef=Math.min(numFields,refMode==='team'?Math.floor(n/3):Math.floor(n/2));
+  // Use the full team pool to compute max possible games, but cap at numFields
+  const totalTeams=teams.length;
+  const ef=Math.min(numFields,refMode==='team'?Math.floor(totalTeams/3):Math.floor(totalTeams/2));
 
   if(ef===0){
 
@@ -4024,7 +4026,16 @@ function generateRound(isFirst){
 
     const pairs=pairTeamsEqualPlays(nonRef,currentRound,opponentCooldown);
 
-    const realPairs=pairs.filter(p=>p.b!=='PAUSE').slice(0,ef);
+    let realPairs=pairs.filter(p=>p.b!=='PAUSE').slice(0,ef);
+    // Fill remaining fields using paused teams with relaxed cooldown
+    if(realPairs.length<ef){
+      const used=new Set(realPairs.flatMap(p=>[p.a,p.b]));
+      const avail=ordered.filter(id=>!used.has(id)&&!tentRef.includes(id));
+      if(avail.length>=2){
+        const fill=pairTeamsEqualPlays(avail,currentRound,0);
+        realPairs=[...realPairs,...fill.filter(p=>p.b!=='PAUSE').slice(0,ef-realPairs.length)];
+      }
+    }
 
     const af=realPairs.length;
 
@@ -4062,7 +4073,16 @@ function generateRound(isFirst){
 
     const pairs=pairTeamsEqualPlays(ordered,currentRound,opponentCooldown);
 
-    const realPairs=pairs.filter(p=>p.b!=='PAUSE').slice(0,ef);
+    let realPairs=pairs.filter(p=>p.b!=='PAUSE').slice(0,ef);
+    // Fill remaining fields using any available unpaired teams with relaxed cooldown
+    if(realPairs.length<ef){
+      const used=new Set(realPairs.flatMap(p=>[p.a,p.b]));
+      const avail=ordered.filter(id=>!used.has(id));
+      if(avail.length>=2){
+        const fill=pairTeamsEqualPlays(avail,currentRound,0);
+        realPairs=[...realPairs,...fill.filter(p=>p.b!=='PAUSE').slice(0,ef-realPairs.length)];
+      }
+    }
 
     const playSet=new Set(realPairs.flatMap(p=>[p.a,p.b]));
 
