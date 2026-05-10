@@ -5828,7 +5828,13 @@ async function verifyEmailOtp(){
       await fbAuth.signInWithEmailAndPassword(email,derivedPw);
     }catch(e2){
       if(e2.code==='auth/user-not-found'||e2.code==='auth/invalid-credential'||e2.code==='auth/invalid-login-credentials'){
-        await fbAuth.createUserWithEmailAndPassword(email,derivedPw);
+        try{
+          await fbAuth.createUserWithEmailAndPassword(email,derivedPw);
+        }catch(e3){
+          if(e3.code==='auth/email-already-in-use'){
+            throw new Error('Diese E-Mail ist bereits mit Google verknüpft. Bitte "Mit Google anmelden" verwenden.');
+          }else{throw e3;}
+        }
       }else{throw e2;}
     }
   }catch(e){
