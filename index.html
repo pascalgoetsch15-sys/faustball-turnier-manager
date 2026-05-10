@@ -5827,7 +5827,7 @@ async function verifyEmailOtp(){
     try{
       await fbAuth.signInWithEmailAndPassword(email,derivedPw);
     }catch(e2){
-      if(e2.code==='auth/user-not-found'||e2.code==='auth/invalid-credential'){
+      if(e2.code==='auth/user-not-found'||e2.code==='auth/invalid-credential'||e2.code==='auth/invalid-login-credentials'){
         await fbAuth.createUserWithEmailAndPassword(email,derivedPw);
       }else{throw e2;}
     }
