@@ -954,6 +954,36 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
       </div>
 
+      <div id="admin-bans-section" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+
+        <div style="font-size:.7rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">E-Mail-Sperren</div>
+
+        <input type="email" id="ban-email-inp" class="sess-inp" placeholder="E-Mail-Adresse sperren..." style="margin-bottom:6px">
+
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+
+          <select id="ban-duration" style="flex:1;padding:8px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem">
+            <option value="permanent">Permanent</option>
+            <option value="1h">1 Stunde</option>
+            <option value="6h">6 Stunden</option>
+            <option value="12h">12 Stunden</option>
+            <option value="24h">24 Stunden</option>
+            <option value="7d">7 Tage</option>
+            <option value="30d">30 Tage</option>
+          </select>
+
+        </div>
+
+        <input type="text" id="ban-reason-inp" class="sess-inp" placeholder="Grund (optional)" style="margin-bottom:6px">
+
+        <div id="ban-add-err" style="display:none;margin-bottom:6px" class="alert alert-danger"></div>
+
+        <button onclick="banEmail()" style="width:100%;padding:9px;background:var(--loss);color:#fff;border:none;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;margin-bottom:12px">🚫 Sperren</button>
+
+        <div id="ban-list"></div>
+
+      </div>
+
     </div>
 
  
@@ -5786,6 +5816,12 @@ async function requestEmailOtp(){
   }
   btn.disabled=true;btn.textContent='Wird gesendet…';
   try{
+    const ban=await checkEmailBan(email);
+    if(ban){
+      const until=ban.bannedUntil?'bis '+new Date(ban.bannedUntil).toLocaleString('de-CH'):'permanent';
+      errEl.textContent='Diese E-Mail ist gesperrt ('+until+(ban.reason?' · '+ban.reason:'')+').';
+      errEl.style.display='block';return;
+    }
     const code=Math.floor(100000+Math.random()*900000).toString();
     const expiry=Date.now()+10*60*1000;
     const key=emailToKey(email);
@@ -5869,8 +5905,72 @@ function stopLastSeenHeartbeat(){
   if(_lastSeenInterval){clearInterval(_lastSeenInterval);_lastSeenInterval=null;}
 }
 
+async function checkEmailBan(email){
+  const key=emailToKey(email);
+  const snap=await fbDb.ref('bannedEmails/'+key).once('value');
+  const ban=snap.val();
+  if(!ban)return null;
+  if(ban.bannedUntil&&Date.now()>ban.bannedUntil){
+    await fbDb.ref('bannedEmails/'+key).remove();
+    return null;
+  }
+  return ban;
+}
+
+function banDurationMs(d){
+  return{permanent:null,'1h':3600000,'6h':21600000,'12h':43200000,'24h':86400000,'7d':604800000,'30d':2592000000}[d];
+}
+
+async function banEmail(){
+  const email=(document.getElementById('ban-email-inp').value||'').trim().toLowerCase();
+  const errEl=document.getElementById('ban-add-err');
+  errEl.style.display='none';
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){errEl.textContent='Bitte eine gültige E-Mail eingeben.';errEl.style.display='block';return;}
+  const duration=document.getElementById('ban-duration').value;
+  const reason=(document.getElementById('ban-reason-inp').value||'').trim();
+  const ms=banDurationMs(duration);
+  const bannedUntil=ms?Date.now()+ms:null;
+  const key=emailToKey(email);
+  await fbDb.ref('bannedEmails/'+key).set({email,bannedAt:Date.now(),bannedUntil,bannedBy:currentUser.email,reason:reason||null});
+  document.getElementById('ban-email-inp').value='';
+  document.getElementById('ban-reason-inp').value='';
+  renderBanList();
+}
+
+async function unbanEmail(key){
+  await fbDb.ref('bannedEmails/'+key).remove();
+  renderBanList();
+}
+
+async function renderBanList(){
+  const list=document.getElementById('ban-list');
+  if(!list)return;
+  const snap=await fbDb.ref('bannedEmails').once('value');
+  const bans=snap.val()||{};
+  const now=Date.now();
+  const entries=Object.entries(bans).filter(([k,b])=>!b.bannedUntil||b.bannedUntil>now);
+  if(!entries.length){list.innerHTML='<div style="font-size:.8rem;color:var(--muted);text-align:center;padding:8px 0">Keine aktiven Sperren</div>';return;}
+  list.innerHTML=entries.map(([k,b])=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);gap:8px">
+      <div style="min-width:0">
+        <div style="font-size:.83rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.email}</div>
+        <div style="font-size:.72rem;color:var(--muted)">${b.bannedUntil?'bis '+new Date(b.bannedUntil).toLocaleString('de-CH'):'Permanent'}${b.reason?' · '+b.reason:''}</div>
+      </div>
+      <button onclick="unbanEmail('${k}')" style="flex-shrink:0;background:transparent;border:1px solid var(--loss);color:var(--loss);border-radius:5px;padding:3px 9px;font-size:.75rem;cursor:pointer">Aufheben</button>
+    </div>`).join('');
+}
+
 fbAuth.onAuthStateChanged(async firebaseUser=>{
   if(firebaseUser){
+    const ban=await checkEmailBan(firebaseUser.email);
+    if(ban){
+      await fbAuth.signOut();
+      const until=ban.bannedUntil?'bis '+new Date(ban.bannedUntil).toLocaleString('de-CH'):'permanent';
+      const errEl=document.getElementById('auth-google-err');
+      errEl.textContent='Dein Konto ist gesperrt ('+until+(ban.reason?' · '+ban.reason:'')+').';
+      errEl.style.display='block';
+      return;
+    }
     const role=firebaseUser.email===SUPERADMIN_EMAIL?'superadmin':'user';
     const key=emailToKey(firebaseUser.email);
     const snap=await fbDb.ref('users/'+key).once('value');
@@ -6074,10 +6174,12 @@ function renderAdminSessList(){
   el.innerHTML=html;
 
   const userSection=document.getElementById('admin-users-section');
-
   if(userSection)userSection.style.display=isSysPriv?'':'none';
 
-  if(isSysPriv)renderAdminUsersList();
+  const banSection=document.getElementById('admin-bans-section');
+  if(banSection)banSection.style.display=isSysPriv?'':'none';
+
+  if(isSysPriv){renderAdminUsersList();renderBanList();}
 
 }
 
