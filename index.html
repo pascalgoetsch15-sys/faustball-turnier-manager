@@ -6177,9 +6177,10 @@ function renderAdminSessList(){
   if(userSection)userSection.style.display=isSysPriv?'':'none';
 
   const banSection=document.getElementById('admin-bans-section');
-  if(banSection)banSection.style.display=isSysPriv?'':'none';
+  if(banSection)banSection.style.display=isSuperAdmin?'':'none';
 
-  if(isSysPriv){renderAdminUsersList();renderBanList();}
+  if(isSysPriv)renderAdminUsersList();
+  if(isSuperAdmin)renderBanList();
 
 }
 
