@@ -5442,17 +5442,67 @@ function getFinalRangliste(){
 
   if(gameMode==='roundrobin')return getStandings();
 
-  const m={};
+  // Build accumulated stats for display (pts/won/lost shown in the table)
+  const statsMap={};
+  teams.forEach(t=>{statsMap[t.id]={id:t.id,name:t.name,pts:0,won:0,lost:0,drawn:0,satsPts:0,satsAgainst:0,sf:0,sa:0,played:0};});
+  const addM=x=>{if(!x.done)return;const a=statsMap[x.teamAId],b=statsMap[x.teamBId];if(a&&b)applyMatchResult(a,b,x);};
+  groupMatches.forEach(addM);
+  placementRounds.forEach(pr=>pr.matches.forEach(addM));
 
-  teams.forEach(t=>{m[t.id]={id:t.id,name:t.name,pts:0,won:0,lost:0,drawn:0,satsPts:0,satsAgainst:0,sf:0,sa:0,played:0};});
+  // No placement rounds: sort by accumulated stats
+  if(!placementRounds.length) return Object.values(statsMap).sort(standingsSorter);
 
-  function add(x){if(!x.done)return;const a=m[x.teamAId],b=m[x.teamBId];if(!a||!b)return;applyMatchResult(a,b,x);}
+  // Determine rank ORDER from placement results
+  const orderedIds=[];
+  const hasSemiFinal=placementRounds.some(r=>r.isSemi)&&placementRounds.some(r=>r.isFinal);
 
-  groupMatches.forEach(add);
+  if(hasSemiFinal){
+    // 2-group structure: Finale/Platz3 → top 4; Platz-rounds → rest
+    const finalRound=placementRounds.find(r=>r.isFinal);
+    const semiRound=placementRounds.find(r=>r.isSemi);
+    const platzRounds=placementRounds.filter(r=>!r.isSemi&&!r.isFinal);
 
-  placementRounds.forEach(pr=>pr.matches.forEach(add));
+    if(finalRound&&!finalRound.placeholder&&finalRound.matches.length>0){
+      const fM=finalRound.matches.find(m=>m.crossLabel==='🏆 Finale');
+      const p3M=finalRound.matches.find(m=>m.crossLabel==='🥉 Platz 3');
+      if(fM){const[w,l]=matchWinnerLoser(fM);orderedIds.push(w,l);}
+      if(p3M){const[w,l]=matchWinnerLoser(p3M);orderedIds.push(w,l);}
+    } else if(semiRound){
+      semiRound.matches.forEach(m=>{orderedIds.push(m.teamAId,m.teamBId);});
+    }
 
-  return Object.values(m).sort(standingsSorter);
+    // Platz-rounds: rank 3 (= 5th/6th) first, then rank 4 (7th/8th), etc.
+    [...platzRounds].sort((a,b)=>a.rankBracket-b.rankBracket).forEach(pr=>{
+      pr.matches.forEach(m=>{
+        if(m.done){const[w,l]=matchWinnerLoser(m);orderedIds.push(w,l);}
+        else{orderedIds.push(m.teamAId,m.teamBId);}
+      });
+    });
+
+  } else {
+    // 3+ groups (or 2-group without semi): mini round-robin within each rank bracket
+    const sortedRounds=[...placementRounds].sort((a,b)=>{
+      const ra=typeof a.rankBracket==='number'?a.rankBracket:99;
+      const rb=typeof b.rankBracket==='number'?b.rankBracket:99;
+      return ra-rb;
+    });
+
+    sortedRounds.forEach(pr=>{
+      const bracketTeams=pr.teamsAtRank||pr.matches.flatMap(m=>[m.teamAId,m.teamBId]).filter((v,i,a)=>a.indexOf(v)===i);
+      const bm={};
+      bracketTeams.forEach(id=>{bm[id]={id,pts:0,won:0,lost:0,drawn:0,sf:0,sa:0,satsPts:0,satsAgainst:0,played:0};});
+      pr.matches.forEach(x=>{if(!x.done)return;const a=bm[x.teamAId],b=bm[x.teamBId];if(a&&b)applyMatchResult(a,b,x);});
+      Object.values(bm).sort(standingsSorter).forEach(t=>orderedIds.push(t.id));
+    });
+  }
+
+  // Teams not yet placed (e.g. uneven groups with no opponent): append sorted by group rank
+  const placed=new Set(orderedIds);
+  const groupRanks={};
+  groups.forEach((_,gi)=>{getGroupStandings(gi).forEach((s,i)=>{groupRanks[s.id]=i;});});
+  teams.filter(t=>!placed.has(t.id)).sort((a,b)=>(groupRanks[a.id]??99)-(groupRanks[b.id]??99)).forEach(t=>orderedIds.push(t.id));
+
+  return orderedIds.map(id=>statsMap[id]).filter(Boolean);
 
 }
 
