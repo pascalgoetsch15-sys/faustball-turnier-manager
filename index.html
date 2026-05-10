@@ -766,7 +766,34 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
     </button>
 
-    <div style="margin-top:10px;font-size:.72rem;color:var(--muted);text-align:center">Jede Google-E-Mail kann nur einmal verwendet werden</div>
+    <button onclick="signInWithMicrosoft()" style="width:100%;padding:14px;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:12px;background:#fff;color:#3c4043;border:1px solid #dadce0;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:500;cursor:pointer;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 1px 3px rgba(0,0,0,.2)'" onmouseout="this.style.boxShadow='none'">
+
+      <svg width="18" height="18" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+
+      Mit Microsoft anmelden
+
+    </button>
+
+    <div id="auth-ms-err" style="display:none;margin:8px 0" class="alert alert-danger"></div>
+
+    <div style="margin-top:10px;font-size:.72rem;color:var(--muted);text-align:center">Google- oder Microsoft-Konto — oder E-Mail-Code</div>
+
+    <div class="auth-sep">oder</div>
+
+    <!-- Email-OTP Login -->
+    <div id="email-otp-step1">
+      <input type="email" id="otp-email-inp" class="sess-inp" placeholder="E-Mail-Adresse eingeben..." style="margin-bottom:8px">
+      <div id="otp-request-err" style="display:none;margin-bottom:8px" class="alert alert-danger"></div>
+      <button id="otp-request-btn" onclick="requestEmailOtp()" style="width:100%;padding:13px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:500;cursor:pointer;transition:background .2s" onmouseover="this.style.background='var(--surface3)'" onmouseout="this.style.background='var(--surface2)'">✉ Code per E-Mail anfordern</button>
+    </div>
+
+    <div id="email-otp-step2" style="display:none">
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:10px;text-align:center">Code wurde an <strong id="otp-email-display" style="color:var(--text)"></strong> gesendet.</div>
+      <input type="text" id="otp-code-inp" class="sess-inp" placeholder="6-stelliger Code..." maxlength="6" inputmode="numeric" style="text-align:center;letter-spacing:6px;font-size:1.3rem;margin-bottom:8px" oninput="this.value=this.value.replace(/\D/g,'')">
+      <div id="otp-verify-err" style="display:none;margin-bottom:8px" class="alert alert-danger"></div>
+      <button id="otp-verify-btn" onclick="verifyEmailOtp()" style="width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:600;cursor:pointer;margin-bottom:8px">Anmelden</button>
+      <button onclick="showOtpStep1()" style="width:100%;padding:9px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.8rem;cursor:pointer">← Andere E-Mail verwenden</button>
+    </div>
 
   </div>
 
@@ -864,7 +891,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
  
 
-      <div style="font-size:.72rem;color:var(--muted);margin-top:4px">Passwort wird über Google verwaltet.</div>
+      <div style="font-size:.72rem;color:var(--muted);margin-top:4px">Anmeldung per Google oder E-Mail-Code — kein Passwort erforderlich.</div>
 
       <div style="border-top:1px solid var(--border);margin-top:18px;padding-top:16px">
 
@@ -1694,6 +1721,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
 <script>
 
@@ -5711,8 +5739,90 @@ firebase.initializeApp(firebaseConfig);
 const fbAuth=firebase.auth();
 const fbDb=firebase.database();
 
+// ── EmailJS Konfiguration ──────────────────────────────────────────────────
+// Setup: emailjs.com → Konto erstellen → Email Service verbinden →
+//   Template mit Variablen {{to_name}}, {{otp_code}} erstellen →
+//   IDs hier eintragen. Firebase Console → Authentication → Sign-in method →
+//   "E-Mail/Passwort" aktivieren.
+const EMAILJS_SERVICE_ID  = 'service_jn3ugqk';
+const EMAILJS_TEMPLATE_ID = 'template_ot4dugb';
+const EMAILJS_PUBLIC_KEY  = 'AcaXXiUssMCjM-a4v';
+// ─────────────────────────────────────────────────────────────────────────
+
 function emailToKey(e){return(e||'').replace(/\./g,',').replace(/@/g,'_at_');}
 function keyToEmail(k){return(k||'').replace(/,/g,'.').replace(/_at_/g,'@');}
+
+function showOtpStep1(){
+  document.getElementById('email-otp-step1').style.display='block';
+  document.getElementById('email-otp-step2').style.display='none';
+  document.getElementById('otp-code-inp').value='';
+  document.getElementById('otp-verify-err').style.display='none';
+  document.getElementById('otp-request-err').style.display='none';
+}
+
+async function requestEmailOtp(){
+  const email=(document.getElementById('otp-email-inp').value||'').trim().toLowerCase();
+  const errEl=document.getElementById('otp-request-err');
+  const btn=document.getElementById('otp-request-btn');
+  errEl.style.display='none';
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    errEl.textContent='Bitte eine gültige E-Mail-Adresse eingeben.';
+    errEl.style.display='block';return;
+  }
+  btn.disabled=true;btn.textContent='Wird gesendet…';
+  try{
+    const code=Math.floor(100000+Math.random()*900000).toString();
+    const expiry=Date.now()+10*60*1000;
+    const key=emailToKey(email);
+    await fbDb.ref('otps/'+key).set({code,expiry,used:false});
+    await emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_TEMPLATE_ID,{
+      email:email,
+      passcode:code,
+      time:'10 Minuten'
+    },EMAILJS_PUBLIC_KEY);
+    document.getElementById('otp-email-display').textContent=email;
+    document.getElementById('email-otp-step1').style.display='none';
+    document.getElementById('email-otp-step2').style.display='block';
+    document.getElementById('otp-code-inp').focus();
+  }catch(e){
+    errEl.textContent='Fehler beim Senden: '+e.text||e.message||JSON.stringify(e);
+    errEl.style.display='block';
+  }finally{
+    btn.disabled=false;btn.textContent='✉ Code per E-Mail anfordern';
+  }
+}
+
+async function verifyEmailOtp(){
+  const email=(document.getElementById('otp-email-inp').value||'').trim().toLowerCase();
+  const entered=(document.getElementById('otp-code-inp').value||'').trim();
+  const errEl=document.getElementById('otp-verify-err');
+  const btn=document.getElementById('otp-verify-btn');
+  errEl.style.display='none';
+  if(entered.length!==6){errEl.textContent='Bitte den 6-stelligen Code eingeben.';errEl.style.display='block';return;}
+  btn.disabled=true;btn.textContent='Prüfe…';
+  try{
+    const key=emailToKey(email);
+    const snap=await fbDb.ref('otps/'+key).once('value');
+    const otp=snap.val();
+    if(!otp||otp.used){errEl.textContent='Code ungültig oder bereits verwendet.';errEl.style.display='block';return;}
+    if(Date.now()>otp.expiry){errEl.textContent='Code abgelaufen. Bitte neuen Code anfordern.';errEl.style.display='block';showOtpStep1();return;}
+    if(otp.code!==entered){errEl.textContent='Falscher Code. Bitte erneut versuchen.';errEl.style.display='block';return;}
+    await fbDb.ref('otps/'+key+'/used').set(true);
+    const derivedPw=key+'_ftm_'+hashPw(key+'faustball_otp_salt_2024');
+    try{
+      await fbAuth.signInWithEmailAndPassword(email,derivedPw);
+    }catch(e2){
+      if(e2.code==='auth/user-not-found'||e2.code==='auth/invalid-credential'){
+        await fbAuth.createUserWithEmailAndPassword(email,derivedPw);
+      }else{throw e2;}
+    }
+  }catch(e){
+    errEl.textContent='Fehler bei der Anmeldung: '+e.message;
+    errEl.style.display='block';
+  }finally{
+    btn.disabled=false;btn.textContent='Anmelden';
+  }
+}
 
 async function signInWithGoogle(){
   const errEl=document.getElementById('auth-google-err');
@@ -5722,6 +5832,19 @@ async function signInWithGoogle(){
     await fbAuth.signInWithPopup(provider);
   }catch(e){
     errEl.textContent='Google-Anmeldung fehlgeschlagen: '+e.message;
+    errEl.style.display='block';
+  }
+}
+
+async function signInWithMicrosoft(){
+  const errEl=document.getElementById('auth-ms-err');
+  errEl.style.display='none';
+  try{
+    const provider=new firebase.auth.OAuthProvider('microsoft.com');
+    provider.setCustomParameters({prompt:'select_account'});
+    await fbAuth.signInWithPopup(provider);
+  }catch(e){
+    errEl.textContent='Microsoft-Anmeldung fehlgeschlagen: '+e.message;
     errEl.style.display='block';
   }
 }
