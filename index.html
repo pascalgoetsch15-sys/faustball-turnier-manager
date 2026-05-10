@@ -4669,7 +4669,7 @@ function renderGroupMatches(){
 
   if(placementRounds.length>0){
 
-    html+='<div class="group-stage-section"><div class="group-stage-header">Platzierungsrunden <span class="phase-badge phase-place">Von hinten nach vorne</span></div>';
+    html+='<div class="group-stage-section"><div class="group-stage-header">Platzierungsrunden <span class="phase-badge phase-place">Alle gleichzeitig · Finale zuletzt</span></div>';
 
     placementRounds.forEach((pr,pri)=>{
 
@@ -4681,13 +4681,13 @@ function renderGroupMatches(){
 
       }
 
-      const prevDone=pri===0||placementRounds.slice(0,pri).every(r=>r.done||r.placeholder);
-
       const roundDone=pr.matches.length>0&&pr.matches.every(m=>m.done);
 
       if(roundDone&&!pr.done)pr.done=true;
 
-      const isActive=prevDone&&!roundDone&&!pr.placeholder;
+      const isFinale=pr.isFinal||pr.label==='Finale';
+
+      const isActive=!pr.placeholder&&!roundDone&&(isFinale?placementRounds.slice(0,pri).every(r=>r.done||r.placeholder):true);
 
       html+=`<div class="placement-section" style="border-color:${roundDone?'rgba(34,197,94,.3)':isActive?'rgba(249,115,22,.3)':'var(--border)'}">`;
 
@@ -4902,6 +4902,8 @@ function groupMatchCard(m,isActive){
 
           <div style="margin-top:7px"><span class="badge ${draw?'badge-draw':'badge-done'}">${draw?'Unentschieden':(aW?esc(nA):esc(nB))+' gewinnt'}</span></div>
 
+          ${(userRole==='admin'||userRole==='operator')?`<button onclick="reopenGroupMatch('${m.id}')" style="margin-top:8px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer">✏ Ergebnis ändern</button>`:''}
+
         </div></div>`;
 
     } else {
@@ -4927,6 +4929,8 @@ function groupMatchCard(m,isActive){
         <div style="text-align:center">${setsHtml}
 
           <div style="margin-top:7px"><span class="badge badge-done">${aw+':'+bw} Sätze</span></div>
+
+          ${(userRole==='admin'||userRole==='operator')?`<button onclick="reopenGroupMatch('${m.id}')" style="margin-top:8px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer">✏ Ergebnis ändern</button>`:''}
 
         </div></div>`;
 
@@ -5217,6 +5221,38 @@ function checkPlacementRoundDone(){
   const semiRound=placementRounds.find(r=>r.isSemi);
 
   if(semiRound&&semiRound.done)tryGenerateFinals();
+
+}
+
+function reopenGroupMatch(id){
+
+  if(userRole==='user'){alert('Keine Berechtigung.');return;}
+
+  const m=findGroupMatch(id);if(!m)return;
+
+  m.done=false;m.scoreA=null;m.scoreB=null;if(m.sets)m.sets=[];
+
+  for(const pr of placementRounds){
+
+    if(pr.matches.some(x=>x.id===id)){
+
+      pr.done=false;
+
+      if(pr.isSemi){
+
+        const finalRound=placementRounds.find(r=>r.isFinal);
+
+        if(finalRound){finalRound.matches=[];finalRound.placeholder=true;finalRound.done=false;}
+
+      }
+
+      break;
+
+    }
+
+  }
+
+  renderMatches();saveSessionState();
 
 }
 
