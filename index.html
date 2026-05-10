@@ -2955,7 +2955,7 @@ function renderCooldownUI(){
 
 ============================================================ */
 
-function setRefMode(m){
+function setRefMode(m,fromLoad=false){
 
   // Non-zufall modes: lock after start. Zufall: allow mid-tournament refMode changes.
   if(started&&gameMode!=='zufall')return;
@@ -2979,13 +2979,13 @@ function setRefMode(m){
   document.getElementById('refModeInfo').innerHTML=info[m];
 
   // Zufall mid-tournament: retroactively update officialRef for all existing rounds
-  if(started&&gameMode==='zufall'){
+  if(started&&gameMode==='zufall'&&!fromLoad){
     zufallRounds.forEach(round=>{
-      round.matches.forEach(ma=>{delete ma.officialRef;});
+      (round.matches||[]).forEach(ma=>{delete ma.officialRef;});
       if(m==='team')
-        round.sittingOut.forEach((p,i)=>{if(i<round.matches.length)round.matches[i].officialRef=p.name;});
+        (round.sittingOut||[]).forEach((p,i)=>{if(i<(round.matches||[]).length)(round.matches||[])[i].officialRef=p.name;});
       else if(m==='official'&&referees.length)
-        round.matches.forEach((ma,i)=>{ma.officialRef=referees[i%referees.length];});
+        (round.matches||[]).forEach((ma,i)=>{ma.officialRef=referees[i%referees.length];});
     });
     renderZufallMatches();
     saveSessionState();
@@ -6744,7 +6744,7 @@ function loadSessionState(st){
 
   zufallSameGender=st.zufallSameGender!==undefined?st.zufallSameGender:true;
 
-  zufallRounds=st.zufallRounds||[];
+  zufallRounds=(st.zufallRounds||[]).map(r=>({...r,matches:r.matches||[],sittingOut:r.sittingOut||[]}));
 
   zufallPartnerCount=st.zufallPartnerCount||{};zufallOpponentCount=st.zufallOpponentCount||{};
 
@@ -6760,7 +6760,7 @@ function loadSessionState(st){
 
 function refreshAllViews(){
 
-  setMode(gameMode);setRefMode(refMode);
+  setMode(gameMode);setRefMode(refMode,true);
 
   // setMode returns early when started=true; restore UI manually
   if(started){
