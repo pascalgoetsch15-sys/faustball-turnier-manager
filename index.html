@@ -602,6 +602,10 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
 .st-pause{color:var(--pause);font-size:.78rem}
 
+.slot-table tr.st-violation td:first-child{border-left:3px solid var(--loss)}
+
+.st-match-violation{background:rgba(239,68,68,.13);color:var(--loss)}
+
 .grp-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle;flex-shrink:0}
 
 @media print{header,.tabs,.timer-widget,.bottom-actions,.beenden-btn,.btn-primary,.btn-success,.btn-ghost,.btn-endspurt,.round-actions,#view-setup,#view-settings,.print-hide,.score-inputs,.satz-input-group{display:none!important}body{background:#fff!important;color:#000!important;padding:0!important}.view.print-active{display:block!important;padding:20px!important;max-width:100%!important}.rangliste-table td,.rangliste-table th,.standings-table td,.standings-table th{color:#000!important;background:#f5f5f5!important}.match-card{background:#f8f8f8!important;border-color:#ddd!important}.field-chip{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
@@ -3550,7 +3554,7 @@ function initGroupTournament(){
 
 function scheduleGroupMatches(pool,slotSize,maxConsec){
 
-  const remaining=[...pool];
+  let remaining=[...pool];
 
   const result=[];
 
@@ -3576,63 +3580,33 @@ function scheduleGroupMatches(pool,slotSize,maxConsec){
 
     });
 
-    // Pass 1: no b2b, no mustRest
+    // Sort candidates: prefer games where teams haven't played recently and have lower consecutive counts
+    const coolSort=(a,b)=>{
+      const aB2B=(lastSlotPlayed[a.a]===slotIdx-1?1:0)+(lastSlotPlayed[a.b]===slotIdx-1?1:0);
+      const bB2B=(lastSlotPlayed[b.a]===slotIdx-1?1:0)+(lastSlotPlayed[b.b]===slotIdx-1?1:0);
+      if(aB2B!==bB2B)return aB2B-bB2B;
+      return Math.max(consecCount[a.a]||0,consecCount[a.b]||0)-Math.max(consecCount[b.a]||0,consecCount[b.b]||0);
+    };
 
-    for(let i=remaining.length-1;i>=0&&thisSlot.length<slotCount;i--){
-
-      const m=remaining[i];
-
-      if(lastSlotPlayed[m.a]!==slotIdx-1&&lastSlotPlayed[m.b]!==slotIdx-1&&
-
-         !mustRest.has(m.a)&&!mustRest.has(m.b)&&
-
-         !usedInSlot.has(m.a)&&!usedInSlot.has(m.b)){
-
-        thisSlot.push({...m});usedInSlot.add(m.a);usedInSlot.add(m.b);remaining.splice(i,1);
-
-      }
-
-    }
-
-    // Pass 2: allow b2b, but no mustRest
-
-    for(let i=remaining.length-1;i>=0&&thisSlot.length<slotCount;i--){
-
-      const m=remaining[i];
-
-      if(!mustRest.has(m.a)&&!mustRest.has(m.b)&&!usedInSlot.has(m.a)&&!usedInSlot.has(m.b)){
-
+    const tryFill=(allowB2B,allowViolation)=>{
+      const candidates=[...remaining].sort(coolSort);
+      for(const m of candidates){
+        if(thisSlot.length>=slotCount)break;
+        if(usedInSlot.has(m.a)||usedInSlot.has(m.b))continue;
         const isB2B=lastSlotPlayed[m.a]===slotIdx-1||lastSlotPlayed[m.b]===slotIdx-1;
-
-        thisSlot.push({...m,b2bWarning:isB2B||undefined});usedInSlot.add(m.a);usedInSlot.add(m.b);remaining.splice(i,1);
-
+        const isViol=mustRest.has(m.a)||mustRest.has(m.b);
+        if(!allowViolation&&isViol)continue;
+        if(!allowB2B&&isB2B)continue;
+        const idx=remaining.findIndex(x=>x===m);
+        remaining.splice(idx,1);
+        thisSlot.push({...m,b2bWarning:isB2B||undefined,tripleWarning:isViol||undefined});
+        usedInSlot.add(m.a);usedInSlot.add(m.b);
       }
+    };
 
-    }
-
-    // Pass 3 (emergency only): if NOTHING was scheduled and mustRest teams block everything
-
-    if(thisSlot.length===0&&remaining.length>0){
-
-      for(let i=remaining.length-1;i>=0&&thisSlot.length<slotCount;i--){
-
-        const m=remaining[i];
-
-        if(!usedInSlot.has(m.a)&&!usedInSlot.has(m.b)){
-
-          const isB2B=lastSlotPlayed[m.a]===slotIdx-1||lastSlotPlayed[m.b]===slotIdx-1;
-
-          const isViolation=mustRest.has(m.a)||mustRest.has(m.b);
-
-          thisSlot.push({...m,b2bWarning:isB2B||undefined,tripleWarning:isViolation||undefined});
-
-          usedInSlot.add(m.a);usedInSlot.add(m.b);remaining.splice(i,1);
-
-        }
-
-      }
-
-    }
+    tryFill(false,false);
+    tryFill(true,false);
+    if(thisSlot.length===0)tryFill(true,true);
 
     if(thisSlot.length===0&&remaining.length>0){
 
@@ -4591,7 +4565,9 @@ function renderSlotOverview(){
 
     const allDone=sm.every(m=>m.done);
 
-    const rowClass=allDone?'st-done':(si===firstIncomplete?'st-active':'');
+    const hasViolation=sm.some(m=>m.tripleWarning);
+
+    const rowClass=(allDone?'st-done':(si===firstIncomplete?'st-active':''))+(hasViolation?' st-violation':'');
 
     const playing=new Set(sm.flatMap(m=>[m.teamAId,m.teamBId]));
 
@@ -4599,7 +4575,7 @@ function renderSlotOverview(){
 
     const pause=allIds.filter(id=>!playing.has(id)&&!refsInSlot.has(id));
 
-    html+=`<tr class="${rowClass}"><td class="st-nr">${+si+1}${allDone?' <span style="color:var(--win)">✓</span>':''}</td>`;
+    html+=`<tr class="${rowClass}"><td class="st-nr">${+si+1}${allDone?' <span style="color:var(--win)">✓</span>':hasViolation?' <span style="color:var(--loss);font-size:.75rem">⚠</span>':''}</td>`;
 
     for(let f=0;f<maxF;f++){
 
@@ -4613,7 +4589,11 @@ function renderSlotOverview(){
 
         let score='';if(m.done){if(gameMode==='gruppensaetze'&&m.sets&&m.sets.length){let aw=0,bw=0;(m.sets||[]).forEach(([sa,sb])=>{if(sa>sb)aw++;else if(sb>sa)bw++;});score=` <span style="font-size:.72rem;color:var(--win)">${aw}:${bw}</span>`;}else{score=` <span style="font-size:.72rem;color:var(--win)">${m.scoreA}:${m.scoreB}</span>`;}}
 
-        html+=`<td class="st-match">${dot}${esc(tname(m.teamAId))} – ${esc(tname(m.teamBId))}${score}</td>`;
+        const cellCls=m.tripleWarning?'st-match st-match-violation':'st-match';
+
+        const vIcon=m.tripleWarning?' <span style="font-size:.68rem">⚠</span>':'';
+
+        html+=`<td class="${cellCls}">${dot}${esc(tname(m.teamAId))} – ${esc(tname(m.teamBId))}${score}${vIcon}</td>`;
 
         if(hasRef){
 
