@@ -6624,6 +6624,17 @@ function refreshAllViews(){
       renderZufallPlayers();
     }
     applyStartedLock();
+  } else {
+    // Remove stale lock overlays and re-enable all setup controls
+    document.querySelectorAll('.lock-overlay').forEach(lo=>lo.remove());
+    const vs=document.getElementById('view-setup');
+    if(vs)vs.classList.remove('is-started');
+    ['groupsDown','groupsUp','fieldsDown','fieldsUp','cdDown','cdUp','maxConsecDown','maxConsecUp'].forEach(id=>{
+      const el=document.getElementById(id);if(el)el.disabled=false;
+    });
+    ['rmb0','rmb1','rmb2'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
+    const rangliste=document.getElementById('tab-rangliste');
+    if(rangliste&&!tournamentFinished)rangliste.style.display='none';
   }
 
   renderTeamList();updateStartCard();updateHeaderBadge();
