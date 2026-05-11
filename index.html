@@ -1797,6 +1797,7 @@ let zufallMen=[],zufallWomen=[],zufallSameGender=true;
 let zufallRounds=[]; // [{matches:[{id,a:[],aNames:[],b:[],bNames:[],scoreA,scoreB,done,gender}]}]
 let zufallPartnerCount={};  // {pid:{pid:n}} – wie oft zusammengespielt
 let zufallOpponentCount={}; // {pid:{pid:n}} – wie oft gegeneinander gespielt
+let zufallPlayCount={};     // {pid:n} – wie oft insgesamt gespielt (für Ausgleich)
 let zufallPlayerIdCounter=0;
 
 // Endspurt state
@@ -2351,6 +2352,7 @@ function addZufallPlayer(gender){
   arr.push(p);
   zufallPartnerCount[p.id]={};
   zufallOpponentCount[p.id]={};
+  zufallPlayCount[p.id]=0;
   inp.value='';
   renderZufallPlayers();
   updateStartCard();
@@ -2363,6 +2365,7 @@ function removeZufallPlayer(id,gender){
   else zufallWomen=zufallWomen.filter(p=>p.id!==id);
   delete zufallPartnerCount[id];
   delete zufallOpponentCount[id];
+  delete zufallPlayCount[id];
   renderZufallPlayers();
   updateStartCard();
   saveSessionState();
@@ -2435,31 +2438,52 @@ function _zufallOpponentCost(pairA,pairB){
 }
 
 function _makeOptimalPairs(players){
-  const avail=[...players];
+  // Sort ascending by play count so most-played player ends up sitting out when count is odd
+  const avail=[...players].sort((a,b)=>(zufallPlayCount[a.id]||0)-(zufallPlayCount[b.id]||0));
+  const sittingOut=[];
+  if(avail.length%2===1){
+    // Explicitly remove most-played player to sit out
+    let maxIdx=0;
+    for(let i=1;i<avail.length;i++)
+      if((zufallPlayCount[avail[i].id]||0)>(zufallPlayCount[avail[maxIdx].id]||0))maxIdx=i;
+    sittingOut.push(...avail.splice(maxIdx,1));
+  }
   const pairs=[];
   while(avail.length>=2){
     const first=avail.shift();
-    let bestIdx=0,bestCost=Infinity;
+    let bestIdx=0,bestPri=Infinity,bestSec=Infinity;
     for(let i=0;i<avail.length;i++){
-      const c=_zufallPairCost(first,avail[i]);
-      if(c<bestCost){bestCost=c;bestIdx=i;}
+      const pri=_zufallPairCost(first,avail[i]);
+      const sec=zufallPlayCount[avail[i].id]||0;
+      if(pri<bestPri||(pri===bestPri&&sec<bestSec)){bestPri=pri;bestSec=sec;bestIdx=i;}
     }
     pairs.push([first,avail.splice(bestIdx,1)[0]]);
   }
-  return {pairs,sittingOut:avail.slice()};
+  return {pairs,sittingOut};
 }
 
 function _makeMixedPairs(men,women){
-  const availW=[...women];
-  const pairs=[];
+  // Remove most-played players from the larger group until counts match
+  let availM=[...men],availW=[...women];
   const sittingOut=[];
-  const shuffledM=[...men].sort(()=>Math.random()-.5);
-  for(const man of shuffledM){
+  const removeMostPlayed=arr=>{
+    let maxIdx=0;
+    for(let i=1;i<arr.length;i++)
+      if((zufallPlayCount[arr[i].id]||0)>(zufallPlayCount[arr[maxIdx].id]||0))maxIdx=i;
+    sittingOut.push(...arr.splice(maxIdx,1));
+  };
+  while(availM.length>availW.length)removeMostPlayed(availM);
+  while(availW.length>availM.length)removeMostPlayed(availW);
+  // Sort men ascending by play count for processing order
+  availM.sort((a,b)=>(zufallPlayCount[a.id]||0)-(zufallPlayCount[b.id]||0));
+  const pairs=[];
+  for(const man of availM){
     if(!availW.length){sittingOut.push(man);continue;}
-    let bestIdx=0,bestCost=Infinity;
+    let bestIdx=0,bestPri=Infinity,bestSec=Infinity;
     for(let i=0;i<availW.length;i++){
-      const c=_zufallPairCost(man,availW[i]);
-      if(c<bestCost){bestCost=c;bestIdx=i;}
+      const pri=_zufallPairCost(man,availW[i]);
+      const sec=zufallPlayCount[availW[i].id]||0;
+      if(pri<bestPri||(pri===bestPri&&sec<bestSec)){bestPri=pri;bestSec=sec;bestIdx=i;}
     }
     pairs.push([man,availW.splice(bestIdx,1)[0]]);
   }
@@ -2495,8 +2519,8 @@ function _pairsToMatches(pairs,genderTag){
 function generateAllZufallRounds(){
   if(!started)return;
   zufallRounds=[];
-  zufallPartnerCount={};zufallOpponentCount={};
-  [...zufallMen,...zufallWomen].forEach(p=>{zufallPartnerCount[p.id]={};zufallOpponentCount[p.id]={};});
+  zufallPartnerCount={};zufallOpponentCount={};zufallPlayCount={};
+  [...zufallMen,...zufallWomen].forEach(p=>{zufallPartnerCount[p.id]={};zufallOpponentCount[p.id]={};zufallPlayCount[p.id]=0;});
 
   const allPaired=()=>{
     if(zufallSameGender){
@@ -2553,6 +2577,7 @@ function _updateZufallHistory(match){
   for(const a of match.a)for(const b of match.b){
     inc(zufallOpponentCount,a,b);inc(zufallOpponentCount,b,a);
   }
+  [...match.a,...match.b].forEach(id=>{zufallPlayCount[id]=(zufallPlayCount[id]||0)+1;});
 }
 
 function submitZufallScore(matchId,roundIdx){
@@ -3298,9 +3323,9 @@ function startTournament(){
 
     zufallRounds=[];
 
-    zufallPartnerCount={};zufallOpponentCount={};
+    zufallPartnerCount={};zufallOpponentCount={};zufallPlayCount={};
 
-    [...zufallMen,...zufallWomen].forEach(p=>{zufallPartnerCount[p.id]={};zufallOpponentCount[p.id]={};});
+    [...zufallMen,...zufallWomen].forEach(p=>{zufallPartnerCount[p.id]={};zufallOpponentCount[p.id]={};zufallPlayCount[p.id]=0;});
 
     updateHeaderBadge();applyStartedLock();updateStartCard();
 
@@ -3355,7 +3380,7 @@ function clearLocalState(){
   groups=[];groupPhase='group';groupMatches=[];placementRounds=[];
   tournamentFinished=false;endspurtActive=false;endspurtTarget=0;
   zufallMen=[];zufallWomen=[];zufallSameGender=true;
-  zufallRounds=[];zufallPartnerCount={};zufallOpponentCount={};zufallPlayerIdCounter=0;
+  zufallRounds=[];zufallPartnerCount={};zufallOpponentCount={};zufallPlayCount={};zufallPlayerIdCounter=0;
 }
 
 function resetTournament(){
@@ -3372,9 +3397,9 @@ function resetTournament(){
 
   tournamentFinished=false;endspurtActive=false;endspurtTarget=0;
 
-  zufallRounds=[];zufallPartnerCount={};zufallOpponentCount={};
+  zufallRounds=[];zufallPartnerCount={};zufallOpponentCount={};zufallPlayCount={};
 
-  [...zufallMen,...zufallWomen].forEach(p=>{zufallPartnerCount[p.id]={};zufallOpponentCount[p.id]={};});
+  [...zufallMen,...zufallWomen].forEach(p=>{zufallPartnerCount[p.id]={};zufallOpponentCount[p.id]={};zufallPlayCount[p.id]=0;});
 
   teams.forEach(t=>{matchHistory[t.id]={};refHistory[t.id]=0;teamPlayCount[t.id]=0;});
 
@@ -5553,10 +5578,60 @@ function getFinalRangliste(){
 
   // Determine rank ORDER from placement results
   const orderedIds=[];
-  const hasSemiFinal=placementRounds.some(r=>r.isSemi)&&placementRounds.some(r=>r.isFinal);
+  const placed=new Set();
+  const addUnique=id=>{if(id&&!placed.has(id)){placed.add(id);orderedIds.push(id);}};
 
-  if(hasSemiFinal){
-    // 2-group structure: Finale/Platz3 → top 4; Platz-rounds → rest
+  const isNewKO=placementRounds.some(pr=>pr.isKnockout);
+
+  if(isNewKO){
+    // New KO bracket system (isKnockout flag present)
+    // 1st/2nd: from the main isFinal round
+    const finalRound=placementRounds.find(pr=>pr.isKnockout&&!pr.consolation&&pr.isFinal);
+    if(finalRound&&!finalRound.placeholder&&finalRound.matches.length>0){
+      const m=finalRound.matches[0];
+      if(m.done){const[w,l]=matchWinnerLoser(m);addUnique(w);addUnique(l);}
+      else{addUnique(m.teamAId);addUnique(m.teamBId);}
+    }
+
+    // 3rd+: from consolation rounds
+    const consRounds=placementRounds.filter(pr=>pr.consolation).sort((a,b)=>a.posLow-b.posLow);
+    // Terminal = consolation round whose id is NOT referenced as generatedBy by another consolation round
+    const consIds=new Set(consRounds.map(pr=>pr.id));
+    const childIds=new Set(consRounds.map(pr=>pr.generatedBy).filter(id=>consIds.has(id)));
+    const terminalCons=consRounds.filter(pr=>!childIds.has(pr.id));
+    const nonTerminalCons=consRounds.filter(pr=>childIds.has(pr.id));
+
+    terminalCons.forEach(pr=>{
+      if(pr.matches.length===1){
+        const m=pr.matches[0];
+        if(m.done){const[w,l]=matchWinnerLoser(m);addUnique(w);addUnique(l);}
+        else{addUnique(m.teamAId);addUnique(m.teamBId);}
+      } else {
+        // Multi-match terminal: sort within bracket by accumulated stats
+        const bt=pr.matches.flatMap(m=>[m.teamAId,m.teamBId]).filter((v,i,a)=>a.indexOf(v)===i);
+        const bm={};
+        bt.forEach(id=>{bm[id]={id,pts:0,won:0,lost:0,drawn:0,sf:0,sa:0,satsPts:0,satsAgainst:0,played:0};});
+        pr.matches.forEach(x=>{if(!x.done)return;const a=bm[x.teamAId],b=bm[x.teamBId];if(a&&b)applyMatchResult(a,b,x);});
+        Object.values(bm).sort(standingsSorter).forEach(t=>addUnique(t.id));
+      }
+    });
+
+    // Non-terminal consolation rounds: add any remaining unplaced teams (child rounds not yet generated)
+    nonTerminalCons.forEach(pr=>{
+      pr.matches.forEach(m=>{
+        if(m.done){const[w,l]=matchWinnerLoser(m);addUnique(w);addUnique(l);}
+        else{addUnique(m.teamAId);addUnique(m.teamBId);}
+      });
+    });
+
+    // Main bracket non-final rounds: add bye teams and teams from undecided earlier rounds
+    placementRounds.filter(pr=>pr.isKnockout&&!pr.consolation&&!pr.isFinal).forEach(pr=>{
+      (pr.byeTeams||[]).forEach(id=>addUnique(id));
+      pr.matches.forEach(m=>{addUnique(m.teamAId);addUnique(m.teamBId);});
+    });
+
+  } else if(placementRounds.some(r=>r.isSemi)&&placementRounds.some(r=>r.isFinal)){
+    // Legacy 2-group structure: Finale/Platz3 → top 4; Platz-rounds → rest
     const finalRound=placementRounds.find(r=>r.isFinal);
     const semiRound=placementRounds.find(r=>r.isSemi);
     const platzRounds=placementRounds.filter(r=>!r.isSemi&&!r.isFinal);
@@ -5564,17 +5639,16 @@ function getFinalRangliste(){
     if(finalRound&&!finalRound.placeholder&&finalRound.matches.length>0){
       const fM=finalRound.matches.find(m=>m.crossLabel==='🏆 Finale');
       const p3M=finalRound.matches.find(m=>m.crossLabel==='🥉 Platz 3');
-      if(fM){const[w,l]=matchWinnerLoser(fM);orderedIds.push(w,l);}
-      if(p3M){const[w,l]=matchWinnerLoser(p3M);orderedIds.push(w,l);}
+      if(fM){const[w,l]=matchWinnerLoser(fM);addUnique(w);addUnique(l);}
+      if(p3M){const[w,l]=matchWinnerLoser(p3M);addUnique(w);addUnique(l);}
     } else if(semiRound){
-      semiRound.matches.forEach(m=>{orderedIds.push(m.teamAId,m.teamBId);});
+      semiRound.matches.forEach(m=>{addUnique(m.teamAId);addUnique(m.teamBId);});
     }
 
-    // Platz-rounds: rank 3 (= 5th/6th) first, then rank 4 (7th/8th), etc.
     [...platzRounds].sort((a,b)=>a.rankBracket-b.rankBracket).forEach(pr=>{
       pr.matches.forEach(m=>{
-        if(m.done){const[w,l]=matchWinnerLoser(m);orderedIds.push(w,l);}
-        else{orderedIds.push(m.teamAId,m.teamBId);}
+        if(m.done){const[w,l]=matchWinnerLoser(m);addUnique(w);addUnique(l);}
+        else{addUnique(m.teamAId);addUnique(m.teamBId);}
       });
     });
 
@@ -5591,15 +5665,14 @@ function getFinalRangliste(){
       const bm={};
       bracketTeams.forEach(id=>{bm[id]={id,pts:0,won:0,lost:0,drawn:0,sf:0,sa:0,satsPts:0,satsAgainst:0,played:0};});
       pr.matches.forEach(x=>{if(!x.done)return;const a=bm[x.teamAId],b=bm[x.teamBId];if(a&&b)applyMatchResult(a,b,x);});
-      Object.values(bm).sort(standingsSorter).forEach(t=>orderedIds.push(t.id));
+      Object.values(bm).sort(standingsSorter).forEach(t=>addUnique(t.id));
     });
   }
 
-  // Teams not yet placed (e.g. uneven groups with no opponent): append sorted by group rank
-  const placed=new Set(orderedIds);
+  // Teams not yet placed: append sorted by group rank
   const groupRanks={};
   groups.forEach((_,gi)=>{getGroupStandings(gi).forEach((s,i)=>{groupRanks[s.id]=i;});});
-  teams.filter(t=>!placed.has(t.id)).sort((a,b)=>(groupRanks[a.id]??99)-(groupRanks[b.id]??99)).forEach(t=>orderedIds.push(t.id));
+  teams.filter(t=>!placed.has(t.id)).sort((a,b)=>(groupRanks[a.id]??99)-(groupRanks[b.id]??99)).forEach(t=>addUnique(t.id));
 
   return orderedIds.map(id=>statsMap[id]).filter(Boolean);
 
@@ -7008,7 +7081,7 @@ function saveSessionState(){
 
     zufallMen,zufallWomen,zufallSameGender,zufallRounds,
 
-    zufallPartnerCount,zufallOpponentCount,zufallPlayerIdCounter
+    zufallPartnerCount,zufallOpponentCount,zufallPlayCount,zufallPlayerIdCounter
 
   };
 
@@ -7050,7 +7123,7 @@ function loadSessionState(st){
 
   zufallRounds=(st.zufallRounds||[]).map(r=>({...r,matches:r.matches||[],sittingOut:r.sittingOut||[]}));
 
-  zufallPartnerCount=st.zufallPartnerCount||{};zufallOpponentCount=st.zufallOpponentCount||{};
+  zufallPartnerCount=st.zufallPartnerCount||{};zufallOpponentCount=st.zufallOpponentCount||{};zufallPlayCount=st.zufallPlayCount||{};
 
   zufallPlayerIdCounter=st.zufallPlayerIdCounter||0;
 
