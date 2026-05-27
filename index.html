@@ -775,7 +775,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
 /* ── LOCKED SETUP ── */
 
-#view-setup.is-started .card:not(#teamCard):not(#startInfoCard){position:relative}
+#view-setup.is-started .card:not(#teamCard):not(#startInfoCard):not(#participantsCard){position:relative}
 
 #view-setup.is-started .lock-overlay{display:flex!important}
 
@@ -1163,7 +1163,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
   <h2>Teams, Felder &amp; Spielmodus</h2>
 
-  <div class="card">
+  <div class="card" id="gameModeCard">
 
     <h3>🎮 Spielmodus</h3>
 
@@ -1384,7 +1384,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
   </div>
 
-  <div class="card">
+  <div class="card" id="refModeCard">
 
     <h3>🟣 Schiedsrichter-Modus</h3>
 
@@ -5943,7 +5943,7 @@ function applyStartedLock(){
 
   // Add lock overlays to lockable cards if not already present
 
-  ['scoringCard','winSatzCard','groupSettingsCard','maxConsecCard','cooldownCard'].forEach(id=>{
+  ['gameModeCard','scoringCard','winSatzCard','groupSettingsCard','maxConsecCard','cooldownCard','refModeCard'].forEach(id=>{
 
     const c=document.getElementById(id);
 
