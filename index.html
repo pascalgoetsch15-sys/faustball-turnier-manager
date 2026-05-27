@@ -4045,6 +4045,29 @@ function diffClr(sf,sa){const v=diffMode==='divide'?(sa===0?(sf>0?1:0):sf/sa-1):
 
 function getMinPlayCount(){if(!teams.length)return 0;return Math.min(...teams.map(t=>teamPlayCount[t.id]||0));}
 
+function calcEndspurtRoundsLeft(){
+  if(!endspurtActive||!teams.length)return 0;
+  const counts={};
+  teams.forEach(t=>{counts[t.id]=teamPlayCount[t.id]||0;});
+  const totalTeams=teams.length;
+  let r=0,maxIter=500;
+  while(r<maxIter){
+    const behind=teams.map(t=>t.id).filter(id=>counts[id]<endspurtTarget);
+    if(!behind.length)break;
+    let eff=behind.length;
+    if(eff%2===1){
+      const hasDone=teams.some(t=>counts[t.id]>=endspurtTarget);
+      if(hasDone)eff++;
+    }
+    const fields=Math.min(numFields,refMode==='team'?Math.floor(eff/3):Math.floor(eff/2));
+    if(fields===0)break;
+    const playing=[...behind].sort((a,b)=>counts[a]-counts[b]).slice(0,fields*2);
+    playing.forEach(id=>{counts[id]++;});
+    r++;
+  }
+  return r;
+}
+
 function getMaxPlayCount(){if(!teams.length)return 0;return Math.max(...teams.map(t=>teamPlayCount[t.id]||0));}
 
 function playCountsEqual(){
@@ -4578,11 +4601,16 @@ function renderMatches(){
 
     const remaining=teams.filter(t=>(teamPlayCount[t.id]||0)<endspurtTarget);
 
+    const roundsLeft=calcEndspurtRoundsLeft();
+
+    const roundsLeftTxt=roundsLeft<=0?'<b>Letzte Runde!</b>'
+      :'Noch <b>'+roundsLeft+'</b> Runde'+(roundsLeft===1?'':'n');
+
     html+=`<div class="alert alert-endspurt" style="margin-top:12px">
 
-      ⚡ <b>Endspurt läuft!</b> Ziel: alle Teams erreichen <b>${endspurtTarget} Spiele</b>.
+      ⚡ <b>Endspurt läuft!</b> Ziel: alle Teams erreichen <b>${endspurtTarget} Spiele</b>. · ${roundsLeftTxt}
 
-      ${remaining.length>0?'Noch nicht erreicht: '+remaining.map(t=>'<span class="plays-badge">'+esc(t.name)+' · '+(teamPlayCount[t.id]||0)+'×</span>').join(' '):'<b>Fast geschafft!</b>'}
+      ${remaining.length>0?'<br>Noch nicht erreicht: '+remaining.map(t=>'<span class="plays-badge">'+esc(t.name)+' · '+(teamPlayCount[t.id]||0)+'×</span>').join(' '):''}
 
       <br><small style="opacity:.7">Nach dem letzten Ergebnis wird das Turnier automatisch beendet.</small>
 
