@@ -608,6 +608,17 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
 .grp-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle;flex-shrink:0}
 
+.print-only{display:none}
+
+/* Print layout selector in settings */
+.print-layout-cards{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.print-layout-card{flex:1;min-width:90px;background:var(--surface2);border:2px solid var(--border);border-radius:10px;padding:14px 10px;cursor:pointer;text-align:center;transition:all .18s}
+.print-layout-card:hover{border-color:var(--accent)}
+.print-layout-card.sel{border-color:var(--accent);background:rgba(249,115,22,.08)}
+.plc-icon{font-size:1.4rem;margin-bottom:6px}
+.plc-label{font-size:.8rem;font-weight:700;color:var(--text)}
+.plc-desc{font-size:.7rem;color:var(--muted);margin-top:3px;line-height:1.3}
+
 @media print{header,.tabs,.timer-widget,.bottom-actions,.beenden-btn,.btn-primary,.btn-success,.btn-ghost,.btn-endspurt,.round-actions,#view-setup,#view-settings,.print-hide,.score-inputs,.satz-input-group{display:none!important}body{background:#fff!important;color:#000!important;padding:0!important}.view.print-active{display:block!important;padding:20px!important;max-width:100%!important}.rangliste-table td,.rangliste-table th,.standings-table td,.standings-table th{color:#000!important;background:#f5f5f5!important}.match-card{background:#f8f8f8!important;border-color:#ddd!important}.field-chip{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 
 @media print{
@@ -621,6 +632,50 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
   body.print-full .slot-group{display:block!important}
 
   .lock-overlay,.sess-screen,.print-modal-overlay{display:none!important}
+
+  /* --- Print header / footer (shown on print only) --- */
+  .print-only{display:block!important}
+  .print-header{padding:0 0 14px 0;margin-bottom:16px;page-break-inside:avoid}
+  .ph-bar{height:4px;border-radius:2px;margin-bottom:12px}
+  .ph-logo{font-size:1.05rem;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+  .ph-name{font-size:1.5rem;font-weight:800;margin:2px 0 4px}
+  .ph-meta{font-size:.78rem;opacity:.6}
+  .print-footer{border-top:1px solid #ccc;margin-top:20px;padding-top:8px;font-size:.72rem;color:#777;display:flex;justify-content:space-between}
+
+  /* --- Layout: Minimal --- */
+  body.print-layout-minimal .print-header{display:none!important}
+  body.print-layout-minimal .card{background:#fff!important;border:none!important;padding:0 0 12px 0!important;border-radius:0!important}
+  body.print-layout-minimal h2,body.print-layout-minimal h3{font-size:.9rem!important;letter-spacing:1px!important;text-transform:uppercase!important;color:#000!important;margin-bottom:6px!important}
+  body.print-layout-minimal .rangliste-table td,body.print-layout-minimal .standings-table td{background:#fff!important;border-bottom:1px solid #e0e0e0!important;border-radius:0!important;color:#000!important}
+  body.print-layout-minimal .rangliste-table th,body.print-layout-minimal .standings-table th{color:#555!important;border-bottom:2px solid #000!important}
+  body.print-layout-minimal .match-card{background:#fff!important;border:1px solid #ccc!important;border-radius:0!important}
+  body.print-layout-minimal .slot-title,body.print-layout-minimal .slot-header{color:#000!important;font-size:.8rem!important}
+  body.print-layout-minimal .print-footer{display:none!important}
+  body.print-layout-minimal .ph-bar{display:none!important}
+
+  /* --- Layout: Standard --- */
+  body.print-layout-standard .ph-bar{background:#888}
+  body.print-layout-standard .ph-logo{color:#444}
+  body.print-layout-standard .ph-name{color:#000}
+  body.print-layout-standard .card{background:#fff!important;border:1px solid #ddd!important;border-radius:8px!important}
+  body.print-layout-standard h2,body.print-layout-standard h3{color:#000!important}
+  body.print-layout-standard .rangliste-table td,body.print-layout-standard .standings-table td{background:#f8f8f8!important;color:#000!important;border-radius:0!important}
+  body.print-layout-standard .rangliste-table th,body.print-layout-standard .standings-table th{color:#333!important;background:#e8e8e8!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body.print-layout-standard .match-card{background:#f9f9f9!important;border:1px solid #ddd!important}
+  body.print-layout-standard .slot-title,body.print-layout-standard .slot-header{color:#000!important}
+
+  /* --- Layout: Komplett --- */
+  body.print-layout-komplett .ph-bar{background:linear-gradient(90deg,#f97316,#eab308);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body.print-layout-komplett .ph-logo{color:#f97316}
+  body.print-layout-komplett .ph-name{color:#000}
+  body.print-layout-komplett .card{background:#fff!important;border:1px solid #ddd!important;border-radius:8px!important}
+  body.print-layout-komplett h2,body.print-layout-komplett h3{color:#000!important}
+  body.print-layout-komplett .rangliste-table th,body.print-layout-komplett .standings-table th{background:#f97316!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body.print-layout-komplett .rangliste-table tr:nth-child(even) td,body.print-layout-komplett .standings-table tr:nth-child(even) td{background:#fff3e8!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body.print-layout-komplett .rangliste-table tr:nth-child(odd) td,body.print-layout-komplett .standings-table tr:nth-child(odd) td{background:#fff!important}
+  body.print-layout-komplett .rangliste-table td,body.print-layout-komplett .standings-table td{color:#000!important;border-radius:0!important}
+  body.print-layout-komplett .match-card{background:#fff!important;border:1px solid #f97316!important;border-left:4px solid #f97316!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body.print-layout-komplett .slot-title,body.print-layout-komplett .slot-header{color:#f97316!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 
 }
 
@@ -1033,6 +1088,18 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 </div>
 
  
+
+<!-- PRINT HEADER (shown on print only) -->
+<div id="printHeader" class="print-only print-header">
+  <div class="ph-bar"></div>
+  <div class="ph-logo">⚡ Faustball Turnier</div>
+  <div class="ph-name" id="phName"></div>
+  <div class="ph-meta" id="phMeta"></div>
+</div>
+<div id="printFooter" class="print-only print-footer">
+  <span id="pfLeft"></span>
+  <span id="pfRight"></span>
+</div>
 
 <header>
 
@@ -1639,6 +1706,36 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
   <div class="card">
 
+    <h3>🖨 Drucken / PDF</h3>
+
+    <div style="font-size:.8rem;color:var(--muted);margin-bottom:12px">Wähle das Layout, das beim Drucken oder Als-PDF-Speichern verwendet wird.</div>
+
+    <div class="print-layout-cards">
+
+      <button class="print-layout-card" id="plc-minimal" onclick="setPrintLayout('minimal')">
+        <div class="plc-icon">⬜</div>
+        <div class="plc-label">Minimal</div>
+        <div class="plc-desc">Schwarz-Weiss, kein Farbe, minimaler Tintenverbrauch</div>
+      </button>
+
+      <button class="print-layout-card" id="plc-standard" onclick="setPrintLayout('standard')">
+        <div class="plc-icon">📄</div>
+        <div class="plc-label">Standard</div>
+        <div class="plc-desc">Sauber formatiert, dezente Grautöne, gute Lesbarkeit</div>
+      </button>
+
+      <button class="print-layout-card" id="plc-komplett" onclick="setPrintLayout('komplett')">
+        <div class="plc-icon">🎨</div>
+        <div class="plc-label">Komplett</div>
+        <div class="plc-desc">Turnier-Header, Orange-Highlights, Datum &amp; Footer</div>
+      </button>
+
+    </div>
+
+  </div>
+
+  <div class="card">
+
     <h3>🔧 Turnier</h3>
 
     <div class="settings-row">
@@ -1734,6 +1831,8 @@ let endspurtActive=false;
 let confirmNextRoundSetting=true;
 
 let endspurtTarget=0;
+
+let printLayout='standard';
 
  
 
@@ -2117,18 +2216,46 @@ function setBgTheme(name){
 
 ============================================================ */
 
+function setPrintLayout(layout){
+  printLayout=layout;
+  ['minimal','standard','komplett'].forEach(l=>{
+    const el=document.getElementById('plc-'+l);
+    if(el)el.classList.toggle('sel',l===layout);
+  });
+  try{localStorage.setItem('fb_printlayout',layout);}catch(e){}
+}
+
+function _applyPrintMeta(viewId){
+  const now=new Date();
+  const dateStr=now.toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const timeStr=now.toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'});
+  const viewLabels={matches:'Spielplan',standings:'Tabelle',rangliste:'Rangliste'};
+  const viewLabel=viewLabels[viewId]||viewId;
+
+  const phName=document.getElementById('phName');
+  const phMeta=document.getElementById('phMeta');
+  const pfLeft=document.getElementById('pfLeft');
+  const pfRight=document.getElementById('pfRight');
+
+  if(phName)phName.textContent=sessionName||'Faustball Turnier';
+  if(phMeta)phMeta.textContent=viewLabel+' · '+dateStr+' '+timeStr;
+  if(pfLeft)pfLeft.textContent=sessionName?sessionName+' — '+viewLabel:viewLabel;
+  if(pfRight)pfRight.textContent=dateStr+' '+timeStr;
+}
+
 function printView(viewId){
-
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('print-active'));
-
   const view=document.getElementById('view-'+viewId);
-
   if(view)view.classList.add('print-active');
+
+  _applyPrintMeta(viewId);
+  ['minimal','standard','komplett'].forEach(l=>document.body.classList.remove('print-layout-'+l));
+  document.body.classList.add('print-layout-'+printLayout);
 
   window.print();
 
   if(view)view.classList.remove('print-active');
-
+  ['minimal','standard','komplett'].forEach(l=>document.body.classList.remove('print-layout-'+l));
 }
 
  
@@ -7191,6 +7318,8 @@ function stopUserSync(){
   try{const s=localStorage.getItem('fb_guiscale');if(s)setGuiScale(parseInt(s));else setGuiScale(5);}catch(e){setGuiScale(5);}
 
   try{const bg=localStorage.getItem('fb_bgtheme');if(bg)setBgTheme(bg);else setBgTheme('standard');}catch(e){setBgTheme('standard');}
+
+  try{const pl=localStorage.getItem('fb_printlayout');if(pl)setPrintLayout(pl);else setPrintLayout('standard');}catch(e){setPrintLayout('standard');}
 
   setMode('roundrobin');
 
