@@ -4142,8 +4142,8 @@ function generateRound(isFirst){
   if(endspurtActive&&!isFirst){
     const behindIds=teams.map(t=>t.id).filter(id=>(teamPlayCount[id]||0)<endspurtTarget);
     let effectiveBehind=behindIds.length;
-    // Odd total teams + odd behind count → last-place team plays one bonus game, cooldown ignored
-    if(totalTeams%2===1&&effectiveBehind%2===1&&effectiveBehind>0){
+    // Odd behind count → add last-place "done" team as bonus partner, cooldown ignored
+    if(effectiveBehind%2===1&&effectiveBehind>0){
       const st=getStandings();
       const cands=st.filter(s=>(teamPlayCount[s.id]||0)>=endspurtTarget);
       if(cands.length>0){endspurtBonusTeamId=cands[cands.length-1].id;effectiveBehind++;}
@@ -4233,10 +4233,10 @@ function generateRound(isFirst){
     const pairs=pairTeamsEqualPlays(pairPool,currentRound,pairCd);
 
     let realPairs=pairs.filter(p=>p.b!=='PAUSE').slice(0,ef);
-    // Fill remaining fields using any available unpaired teams with relaxed cooldown
-    if(realPairs.length<ef){
+    // Fill remaining fields using unpaired teams with relaxed cooldown (not during Endspurt)
+    if(!endspurtActive&&realPairs.length<ef){
       const used=new Set(realPairs.flatMap(p=>[p.a,p.b]));
-      const avail=(endspurtActive?pairPool:ordered).filter(id=>!used.has(id));
+      const avail=ordered.filter(id=>!used.has(id));
       if(avail.length>=2){
         const fill=pairTeamsEqualPlays(avail,currentRound,0);
         realPairs=[...realPairs,...fill.filter(p=>p.b!=='PAUSE').slice(0,ef-realPairs.length)];
