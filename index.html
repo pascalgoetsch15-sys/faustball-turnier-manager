@@ -1740,6 +1740,18 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
     <div class="settings-row">
 
+      <div><div class="sr-label">Diff-Formel</div><div class="sr-desc" id="diffModeDesc">Gemachte − Kassierte Bälle (Differenz)</div></div>
+
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:.75rem;color:var(--muted)">−</span>
+        <label class="toggle-sw"><input type="checkbox" id="diffModeToggle" onchange="setDiffMode(this.checked?'divide':'subtract')"><span class="toggle-track"></span></label>
+        <span style="font-size:.75rem;color:var(--muted)">÷</span>
+      </div>
+
+    </div>
+
+    <div class="settings-row">
+
       <div><div class="sr-label">Bestätigung vor neuer Runde</div><div class="sr-desc">Fragt ob alle Ergebnisse stimmen bevor eine neue Runde generiert wird</div></div>
 
       <label class="toggle-sw"><input type="checkbox" id="confirmNextRound" checked onchange="confirmNextRoundSetting=this.checked"><span class="toggle-track"></span></label>
@@ -1833,6 +1845,8 @@ let confirmNextRoundSetting=true;
 let endspurtTarget=0;
 
 let printLayout='standard';
+
+let diffMode='subtract';
 
  
 
@@ -2215,6 +2229,17 @@ function setBgTheme(name){
    PRINT
 
 ============================================================ */
+
+function setDiffMode(mode){
+  diffMode=mode;
+  const tog=document.getElementById('diffModeToggle');
+  if(tog)tog.checked=(mode==='divide');
+  const desc=document.getElementById('diffModeDesc');
+  if(desc)desc.textContent=mode==='divide'?'Gemachte ÷ Kassierte Bälle (Quotient)':'Gemachte − Kassierte Bälle (Differenz)';
+  try{localStorage.setItem('fb_diffmode',mode);}catch(e){}
+  renderStandings();
+  renderRangliste();
+}
 
 function setPrintLayout(layout){
   printLayout=layout;
@@ -2804,7 +2829,7 @@ function getZufallStandings(){
   }));
   return Object.values(st).sort((a,b)=>{
     if(b.pts!==a.pts)return b.pts-a.pts;
-    const diff=(b.sf-b.sa)-(a.sf-a.sa);
+    const diff=getDiff(b.sf,b.sa)-getDiff(a.sf,a.sa);
     if(diff!==0)return diff;
     return b.sf-a.sf;
   });
@@ -2828,8 +2853,6 @@ function renderZufallStandings(){
   </tr></thead><tbody>`;
   st.forEach((p,i)=>{
     const gIcon=p.gender==='m'?'♂':'♀';
-    const diff=p.sf-p.sa;
-    const diffColor=diff>0?'var(--win)':diff<0?'var(--loss)':'var(--muted)';
     html+=`<tr>
       <td style="font-weight:700">${i+1}</td>
       <td>${esc(p.name)} <span style="font-size:.65rem;color:var(--muted)">${gIcon}</span></td>
@@ -2840,7 +2863,7 @@ function renderZufallStandings(){
       <td style="color:var(--loss)">${p.lost}</td>
       <td>${p.sf}</td>
       <td>${p.sa}</td>
-      <td style="color:${diffColor}">${diff>0?'+':''}${diff}</td>
+      <td style="color:${diffClr(p.sf,p.sa)}">${fmtDiff(p.sf,p.sa)}</td>
     </tr>`;
   });
   html+='</tbody></table>';
@@ -4016,6 +4039,10 @@ function matchWinnerLoser(m){
 
 ============================================================ */
 
+function getDiff(sf,sa){if(diffMode==='divide'){if(sa===0)return sf>0?Infinity:1;return sf/sa;}return sf-sa;}
+function fmtDiff(sf,sa){if(diffMode==='divide'){if(sa===0)return sf>0?'∞':'1.00';return(sf/sa).toFixed(2);}const d=sf-sa;return(d>0?'+':'')+d;}
+function diffClr(sf,sa){const v=diffMode==='divide'?(sa===0?(sf>0?1:0):sf/sa-1):sf-sa;return v>0?'var(--win)':v<0?'var(--loss)':'var(--muted)';}
+
 function getMinPlayCount(){if(!teams.length)return 0;return Math.min(...teams.map(t=>teamPlayCount[t.id]||0));}
 
 function getMaxPlayCount(){if(!teams.length)return 0;return Math.max(...teams.map(t=>teamPlayCount[t.id]||0));}
@@ -4407,7 +4434,7 @@ function getStandings(){
 
     if(b.pts!==a.pts)return b.pts-a.pts;
 
-    const da=a.sf-a.sa,db=b.sf-b.sa;
+    const da=getDiff(a.sf,a.sa),db=getDiff(b.sf,b.sa);
 
     if(db!==da)return db-da;
 
@@ -4417,7 +4444,7 @@ function getStandings(){
 
 }
 
- 
+
 
 /* ============================================================
 
@@ -4968,9 +4995,9 @@ function renderStandingsTable(gs,isZeit,highlightTop){
 
     const satzeStr=s.satsPts+'-'+s.satsAgainst;
 
-    const diff=isZeit?(s.sf-s.sa):satzeStr;
+    const diffVal=isZeit?fmtDiff(s.sf,s.sa):satzeStr;
 
-    const diffColor=isZeit?(s.sf-s.sa>0?'var(--win)':s.sf-s.sa<0?'var(--loss)':'var(--muted)'):'var(--muted)';
+    const diffColor=isZeit?diffClr(s.sf,s.sa):'var(--muted)';
 
     html+=`<tr ${i<highlightTop?'class="row-top"':''}>
 
@@ -4984,7 +5011,7 @@ function renderStandingsTable(gs,isZeit,highlightTop){
 
       <td class="pts-cell">${s.pts}</td>
 
-      <td style="color:${diffColor}">${isZeit?(parseInt(diff)>0?'+':'')+diff:diff}</td>
+      <td style="color:${diffColor}">${diffVal}</td>
 
     </tr>`;
 
@@ -5570,8 +5597,6 @@ function renderStandings(){
 
   st.forEach((s,i)=>{
 
-    const d=s.sf-s.sa;
-
     html+=`<tr ${i<3?'class="row-top"':''}>
 
       <td><span class="standing-pos">${i+1}</span></td>
@@ -5584,7 +5609,7 @@ function renderStandings(){
 
       <td class="pts-cell">${s.pts}</td>
 
-      <td style="color:${d>0?'var(--win)':d<0?'var(--loss)':'var(--muted)'}">${d>0?'+':''}${d}</td>
+      <td style="color:${diffClr(s.sf,s.sa)}">${fmtDiff(s.sf,s.sa)}</td>
 
     </tr>`;
 
@@ -7324,6 +7349,8 @@ function stopUserSync(){
   try{const bg=localStorage.getItem('fb_bgtheme');if(bg)setBgTheme(bg);else setBgTheme('standard');}catch(e){setBgTheme('standard');}
 
   try{const pl=localStorage.getItem('fb_printlayout');if(pl)setPrintLayout(pl);else setPrintLayout('standard');}catch(e){setPrintLayout('standard');}
+
+  try{const dm=localStorage.getItem('fb_diffmode');if(dm)setDiffMode(dm);else setDiffMode('subtract');}catch(e){setDiffMode('subtract');}
 
   setMode('roundrobin');
 
