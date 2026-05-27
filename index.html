@@ -4518,23 +4518,13 @@ function renderMatches(){
 
       }
 
-      let refSumHtml='';
-
-      if(refMode==='official'&&slot.officialRefs&&slot.officialRefs.some(Boolean)){
-
-        const names=slot.officialRefs.map((r,i)=>r?'<span class="chip-name">Feld '+(i+1)+': '+esc(r)+'</span>':'').join('');
-
-        refSumHtml='<div class="info-chip ref"><span>🟣</span><span><span class="chip-label">SCHIRI</span><span class="chip-names">'+names+'</span></span></div>';
-
-      }
-
       let refPauseHtml='';
 
       if(refMode==='official'&&slot.refPauseNames&&slot.refPauseNames.length){
 
         const names=slot.refPauseNames.map(r=>'<span class="chip-name">'+esc(r)+'</span>').join('');
 
-        refPauseHtml='<div class="info-chip pause"><span>⏸</span><span><span class="chip-label">SCHIRI-PAUSE</span><span class="chip-names">'+names+'</span></span></div>';
+        refPauseHtml='<div class="info-chip ref"><span>⏸</span><span><span class="chip-label">SCHIRI-PAUSE</span><span class="chip-names">'+names+'</span></span></div>';
 
       }
 
@@ -4558,7 +4548,7 @@ function renderMatches(){
 
         '</div></div>'+
 
-        '<div class="slot-info-bar">'+pauseHtml+refSumHtml+refPauseHtml+'</div>'+
+        '<div class="slot-info-bar">'+pauseHtml+refPauseHtml+'</div>'+
 
         '<div class="slot-progress"><div class="slot-progress-fill" style="width:'+Math.round(tot?done/tot*100:100)+'%"></div></div>'+
 
