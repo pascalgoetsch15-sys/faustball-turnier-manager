@@ -4,7 +4,7 @@
 
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 
-<title>Faustball Turnier · v1.1</title>
+<title>Faustball Turnier · V2</title>
 
 <link href=https://fonts.googleapis.com/css2?family=Bebas+Neue&amp;family=DM+Sans:wght@300;400;500;600&amp;display=swap rel="stylesheet">
 
@@ -1107,7 +1107,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
     <div class="logo">⚡ Turnier</div>
 
-    <div class="subtitle">Faustball · v1</div>
+    <div class="subtitle">Faustball · V2</div>
 
   </div>
 
@@ -1338,7 +1338,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
   </div>
 
-  <div class="card">
+  <div class="card" id="fieldsCard">
 
     <h3>Anzahl Spielfelder</h3>
 
@@ -1770,7 +1770,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
       <div><div class="sr-label">Version</div><div class="sr-desc">Faustball Turnier</div></div>
 
-      <span class="version-badge">v1.1</span>
+      <span class="version-badge">V2</span>
 
     </div>
 
@@ -5943,7 +5943,7 @@ function applyStartedLock(){
 
   // Add lock overlays to lockable cards if not already present
 
-  ['gameModeCard','scoringCard','winSatzCard','groupSettingsCard','maxConsecCard','cooldownCard','refModeCard'].forEach(id=>{
+  ['gameModeCard','scoringCard','winSatzCard','groupSettingsCard','fieldsCard','maxConsecCard','cooldownCard','refModeCard'].forEach(id=>{
 
     const c=document.getElementById(id);
 
