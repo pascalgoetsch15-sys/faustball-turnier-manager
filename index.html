@@ -1667,79 +1667,6 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
   </div>
 
-  <div class="card">
-
-    <h3>📋 Änderungsprotokoll (v1.1)</h3>
-
-    <ul class="changelog-list">
-
-      <li class="changelog-item">
-
-        <span class="changelog-tag NEW">NEW</span>
-
-        <div class="changelog-text"><strong>Google-Login:</strong> Anmeldung ausschliesslich über Google/Gmail. Jede E-Mail kann global nur einmal verwendet werden.</div>
-
-      </li>
-
-      <li class="changelog-item">
-
-        <span class="changelog-tag NEW">NEW</span>
-
-        <div class="changelog-text"><strong>Globale Sessions:</strong> Sessions sind für alle Nutzer sichtbar und werden in Echtzeit über Firebase synchronisiert.</div>
-
-      </li>
-
-      <li class="changelog-item">
-
-        <span class="changelog-tag NEW">NEW</span>
-
-        <div class="changelog-text"><strong>Timer-Synchronisation:</strong> Der Timer wird sessionübergreifend synchronisiert — Start/Stopp/Reset des Admins ist sofort bei allen Teilnehmern sichtbar. Jede Session hat einen unabhängigen Timer.</div>
-
-      </li>
-
-      <li class="changelog-item">
-
-        <span class="changelog-tag NEW">NEW</span>
-
-        <div class="changelog-text"><strong>Schoch-Modus:</strong> «Rundenturnier» wurde in «Schoch» umbenannt.</div>
-
-      </li>
-
-      <li class="changelog-item">
-
-        <span class="changelog-tag NEW">NEW</span>
-
-        <div class="changelog-text"><strong>Ergebnis nachträglich ändern:</strong> Abgeschlossene Spiele der aktuellen Runde können von Admin/Operator erneut bearbeitet werden (nicht mehr möglich sobald nächste Runde generiert wurde).</div>
-
-      </li>
-
-      <li class="changelog-item">
-
-        <span class="changelog-tag NEW">NEW</span>
-
-        <div class="changelog-text"><strong>Bestätigung vor nächster Runde:</strong> Vor dem Generieren einer neuen Runde wird gefragt, ob alle Ergebnisse korrekt sind.</div>
-
-      </li>
-
-      <li class="changelog-item">
-
-        <span class="changelog-tag FIX">FIX</span>
-
-        <div class="changelog-text"><strong>Endspurt komplett überarbeitet:</strong> Generiert jetzt Runde für Runde (wie «Nächste Runde»), bis alle Teams exakt gleich viele Spiele haben. Nach dem letzten Endspurt-Ergebnis wird das Turnier automatisch beendet und die Rangliste angezeigt.</div>
-
-      </li>
-
-      <li class="changelog-item">
-
-        <span class="changelog-tag NEW">NEW</span>
-
-        <div class="changelog-text"><strong>Endspurt-Modus:</strong> Während Endspurt laufen die pending Runden normal durch — Ergebnisse eintragen, nächste Runde wird automatisch generiert bis Gleichstand erreicht.</div>
-
-      </li>
-
-    </ul>
-
-  </div>
 
 </div>
 
@@ -4054,7 +3981,22 @@ function generateRound(isFirst){
 
   // Use the full team pool to compute max possible games, but cap at numFields
   const totalTeams=teams.length;
-  const ef=Math.min(numFields,refMode==='team'?Math.floor(totalTeams/3):Math.floor(totalTeams/2));
+  let ef=Math.min(numFields,refMode==='team'?Math.floor(totalTeams/3):Math.floor(totalTeams/2));
+
+  // Endspurt: reduce active fields to only what's needed; handle odd-team bonus game
+  let endspurtBonusTeamId=null;
+  if(endspurtActive&&!isFirst){
+    const behindIds=teams.map(t=>t.id).filter(id=>(teamPlayCount[id]||0)<endspurtTarget);
+    let effectiveBehind=behindIds.length;
+    // Odd total teams + odd behind count → last-place team plays one bonus game, cooldown ignored
+    if(totalTeams%2===1&&effectiveBehind%2===1&&effectiveBehind>0){
+      const st=getStandings();
+      const cands=st.filter(s=>(teamPlayCount[s.id]||0)>=endspurtTarget);
+      if(cands.length>0){endspurtBonusTeamId=cands[cands.length-1].id;effectiveBehind++;}
+    }
+    const needed=refMode==='team'?Math.floor(effectiveBehind/3):Math.floor(effectiveBehind/2);
+    if(needed>0&&needed<ef)ef=needed;
+  }
 
   if(ef===0){
 
@@ -4127,13 +4069,20 @@ function generateRound(isFirst){
 
   } else {
 
-    const pairs=pairTeamsEqualPlays(ordered,currentRound,opponentCooldown);
+    // Endspurt: only pair teams that still need games (+ bonus team for odd case)
+    let pairPool=ordered,pairCd=opponentCooldown;
+    if(endspurtActive){
+      pairPool=ordered.filter(id=>(teamPlayCount[id]||0)<endspurtTarget);
+      if(endspurtBonusTeamId)pairPool=[...pairPool,endspurtBonusTeamId];
+      if(endspurtBonusTeamId!==null)pairCd=0;
+    }
+    const pairs=pairTeamsEqualPlays(pairPool,currentRound,pairCd);
 
     let realPairs=pairs.filter(p=>p.b!=='PAUSE').slice(0,ef);
     // Fill remaining fields using any available unpaired teams with relaxed cooldown
     if(realPairs.length<ef){
       const used=new Set(realPairs.flatMap(p=>[p.a,p.b]));
-      const avail=ordered.filter(id=>!used.has(id));
+      const avail=(endspurtActive?pairPool:ordered).filter(id=>!used.has(id));
       if(avail.length>=2){
         const fill=pairTeamsEqualPlays(avail,currentRound,0);
         realPairs=[...realPairs,...fill.filter(p=>p.b!=='PAUSE').slice(0,ef-realPairs.length)];
