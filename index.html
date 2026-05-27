@@ -1818,7 +1818,7 @@ let rounds=[],currentRound=0,started=false;
 
 let matchHistory={},refHistory={};
 
-let slotGlobalCounter=0,teamIdCounter=0;
+let slotGlobalCounter=0,teamIdCounter=0,officialRefGlobalIdx=0;
 
 let teamPlayCount={};
 
@@ -3452,7 +3452,7 @@ function clearLocalState(){
   gameMode='roundrobin';
   numGroups=2;maxConsecutive=2;
   scoring={rr:{win:2,draw:1,loss:0},gz:{win:2,draw:1,loss:0},gs:{matchWin:3,matchDraw:1,matchLoss:0,matchNearLoss:1},numSets:3,winSets:2};
-  rounds=[];currentRound=0;started=false;slotGlobalCounter=0;teamIdCounter=0;
+  rounds=[];currentRound=0;started=false;slotGlobalCounter=0;teamIdCounter=0;officialRefGlobalIdx=0;
   matchHistory={};refHistory={};teamPlayCount={};
   groups=[];groupPhase='group';groupMatches=[];placementRounds=[];
   tournamentFinished=false;endspurtActive=false;endspurtTarget=0;
@@ -3466,7 +3466,7 @@ function resetTournament(){
 
   if(!confirm('Turnier zurücksetzen? Alle Runden und Ergebnisse werden gelöscht.'))return;
 
-  rounds=[];currentRound=0;started=false;slotGlobalCounter=0;
+  rounds=[];currentRound=0;started=false;slotGlobalCounter=0;officialRefGlobalIdx=0;
 
   matchHistory={};refHistory={};teamPlayCount={};
 
@@ -4259,11 +4259,17 @@ function generateRound(isFirst){
 
     });
 
-    const orefs=refMode==='official'&&referees.length
-
-      ?realPairs.map((_,fi)=>referees[(slotGlobalCounter+fi)%referees.length])
-
-      :realPairs.map(()=>null);
+    let orefs,refPauseNames=[];
+    if(refMode==='official'&&referees.length){
+      orefs=realPairs.map((_,fi)=>referees[(officialRefGlobalIdx+fi)%referees.length]);
+      if(referees.length>realPairs.length){
+        const assigned=new Set(orefs);
+        refPauseNames=referees.filter(r=>!assigned.has(r));
+      }
+      officialRefGlobalIdx=(officialRefGlobalIdx+realPairs.length)%referees.length;
+    } else {
+      orefs=realPairs.map(()=>null);
+    }
 
     const matches=realPairs.map((p,fi)=>({
 
@@ -4273,7 +4279,7 @@ function generateRound(isFirst){
 
     }));
 
-    rounds.push([{matches,done:false,pauseTeamIds:pause,refTeamIds:[],officialRefs:orefs,slotIdx:slotGlobalCounter++,isEndspurt:endspurtActive}]);
+    rounds.push([{matches,done:false,pauseTeamIds:pause,refTeamIds:[],officialRefs:orefs,refPauseNames,slotIdx:slotGlobalCounter++,isEndspurt:endspurtActive}]);
 
     slotGlobalCounter+=realPairs.length;
 
@@ -4522,6 +4528,16 @@ function renderMatches(){
 
       }
 
+      let refPauseHtml='';
+
+      if(refMode==='official'&&slot.refPauseNames&&slot.refPauseNames.length){
+
+        const names=slot.refPauseNames.map(r=>'<span class="chip-name">'+esc(r)+'</span>').join('');
+
+        refPauseHtml='<div class="info-chip pause"><span>⏸</span><span><span class="chip-label">SCHIRI-PAUSE</span><span class="chip-names">'+names+'</span></span></div>';
+
+      }
+
       if(tot===0){
 
         html+='<div class="slot-group slot-done">'+pauseHtml+'<div style="padding:8px 0;color:var(--muted);font-size:.86rem">Keine Spiele — zu wenig Teams.</div></div>';
@@ -4542,7 +4558,7 @@ function renderMatches(){
 
         '</div></div>'+
 
-        '<div class="slot-info-bar">'+pauseHtml+refSumHtml+'</div>'+
+        '<div class="slot-info-bar">'+pauseHtml+refSumHtml+refPauseHtml+'</div>'+
 
         '<div class="slot-progress"><div class="slot-progress-fill" style="width:'+Math.round(tot?done/tot*100:100)+'%"></div></div>'+
 
@@ -7182,7 +7198,7 @@ function saveSessionState(){
 
     tournamentFinished,endspurtActive,endspurtTarget,
 
-    teamIdCounter,slotGlobalCounter,
+    teamIdCounter,slotGlobalCounter,officialRefGlobalIdx,
 
     zufallMen,zufallWomen,zufallSameGender,zufallRounds,
 
@@ -7220,7 +7236,7 @@ function loadSessionState(st){
 
   endspurtActive=st.endspurtActive||false;endspurtTarget=st.endspurtTarget||0;
 
-  teamIdCounter=st.teamIdCounter||0;slotGlobalCounter=st.slotGlobalCounter||0;
+  teamIdCounter=st.teamIdCounter||0;slotGlobalCounter=st.slotGlobalCounter||0;officialRefGlobalIdx=st.officialRefGlobalIdx||0;
 
   zufallMen=st.zufallMen||[];zufallWomen=st.zufallWomen||[];
 
