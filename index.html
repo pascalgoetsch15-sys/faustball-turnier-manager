@@ -4272,6 +4272,8 @@ function triggerEndspurt(){
 
   if(userRole==='user'){alert('Keine Berechtigung.');return;}
 
+  if(tournamentFinished){return;}
+
   if(!allCurrentRoundDone()){
 
     alert('Bitte zuerst alle Ergebnisse der aktuellen Runde eintragen.');
@@ -4531,9 +4533,9 @@ function renderMatches(){
 
   const behind=teams.filter(t=>(teamPlayCount[t.id]||0)<getMaxPlayCount());
 
-  const canEndspurt=!endspurtActive&&unequal&&currentRoundDone;
+  const canEndspurt=!tournamentFinished&&!endspurtActive&&unequal&&currentRoundDone;
 
-  const canNextRound=!endspurtActive&&currentRoundDone;
+  const canNextRound=!tournamentFinished&&!endspurtActive&&currentRoundDone;
 
  
 
@@ -4577,7 +4579,7 @@ function renderMatches(){
 
  
 
-    if(userRole!=='user')html+=`<div class="round-actions">
+    if(userRole!=='user'&&!tournamentFinished)html+=`<div class="round-actions">
 
       <div class="round-actions-label">Turnier-Aktionen</div>
 
@@ -4656,6 +4658,8 @@ function reopenMatch(id){
 function nextRoundAction(){
 
   if(userRole==='user'){alert('Keine Berechtigung.');return;}
+
+  if(tournamentFinished){return;}
 
   if(!allCurrentRoundDone()){
 
