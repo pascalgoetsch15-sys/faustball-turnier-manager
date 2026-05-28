@@ -1674,7 +1674,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
   </div>
 
-  <div class="card">
+  <div class="card" id="timerCard">
 
     <h3>⏱ Timer</h3>
 
@@ -7249,9 +7249,9 @@ function applyRole(role){
   const dmr=document.getElementById('diffModeRow');
   if(dmr)dmr.style.display=(isAdmin||isOperator)?'':'none';
 
-  // Timer-Anzeige row: admin/operator only
-  const tvr=document.getElementById('timerVisibleRow');
-  if(tvr)tvr.style.display=(isAdmin||isOperator)?'':'none';
+  // Timer card (all timer settings): admin/operator only
+  const tc=document.getElementById('timerCard');
+  if(tc)tc.style.display=(isAdmin||isOperator)?'':'none';
 
   if(isUser){
 
