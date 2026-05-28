@@ -1752,6 +1752,44 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
   </div>
 
+  <div class="card" id="ranglisteColsCard">
+
+    <h3>🏆 Rangliste · Spalten</h3>
+
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:12px">«#» und «Team» werden immer angezeigt.</div>
+
+    <div class="settings-row">
+      <div><div class="sr-label">Spiele (Sp)</div></div>
+      <label class="toggle-sw"><input type="checkbox" id="rlc-spi" checked onchange="setRanglisteCol('spi',this.checked)"><span class="toggle-track"></span></label>
+    </div>
+
+    <div class="settings-row">
+      <div><div class="sr-label">Siege (S)</div></div>
+      <label class="toggle-sw"><input type="checkbox" id="rlc-s" checked onchange="setRanglisteCol('s',this.checked)"><span class="toggle-track"></span></label>
+    </div>
+
+    <div class="settings-row">
+      <div><div class="sr-label">Unentschieden (U)</div></div>
+      <label class="toggle-sw"><input type="checkbox" id="rlc-u" onchange="setRanglisteCol('u',this.checked)"><span class="toggle-track"></span></label>
+    </div>
+
+    <div class="settings-row">
+      <div><div class="sr-label">Niederlagen (N)</div></div>
+      <label class="toggle-sw"><input type="checkbox" id="rlc-n" onchange="setRanglisteCol('n',this.checked)"><span class="toggle-track"></span></label>
+    </div>
+
+    <div class="settings-row">
+      <div><div class="sr-label">Differenz (Diff)</div></div>
+      <label class="toggle-sw"><input type="checkbox" id="rlc-diff" checked onchange="setRanglisteCol('diff',this.checked)"><span class="toggle-track"></span></label>
+    </div>
+
+    <div class="settings-row">
+      <div><div class="sr-label">Punkte (Pkte)</div></div>
+      <label class="toggle-sw"><input type="checkbox" id="rlc-pts" checked onchange="setRanglisteCol('pts',this.checked)"><span class="toggle-track"></span></label>
+    </div>
+
+  </div>
+
   <div class="card">
 
     <h3>🔧 Turnier</h3>
@@ -1768,7 +1806,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
     </div>
 
-    <div class="settings-row">
+    <div class="settings-row" id="confirmNextRoundRow">
 
       <div><div class="sr-label">Bestätigung vor neuer Runde</div><div class="sr-desc">Fragt ob alle Ergebnisse stimmen bevor eine neue Runde generiert wird</div></div>
 
@@ -1867,6 +1905,8 @@ let printLayout='standard';
 let diffMode='subtract';
 
 let endspurtBtnMode='rounds';
+
+let ranglisteCols={spi:true,s:true,u:false,n:false,diff:true,pts:true};
 
  
 
@@ -2142,6 +2182,8 @@ function toggleTimerVisible(){
 
   if(!show){clearInterval(timerInterval);timerRunning=false;}
 
+  saveSessionState();
+
 }
 
 function updateTimerForMode(){
@@ -2269,6 +2311,12 @@ function setEndspurtBtnMode(mode){
   if(desc)desc.textContent=mode==='rounds'?'Zeigt Anzahl benötigter Runden':'Zeigt Anzahl Teams mit weniger Spielen';
   try{localStorage.setItem('fb_endspurtbtnmode',mode);}catch(e){}
   if(document.getElementById('view-matches')&&document.getElementById('view-matches').classList.contains('active'))renderMatches();
+}
+
+function setRanglisteCol(col,val){
+  ranglisteCols[col]=val;
+  try{localStorage.setItem('fb_ranglistecols',JSON.stringify(ranglisteCols));}catch(e){}
+  renderRangliste();
 }
 
 function setPrintLayout(layout){
@@ -3217,6 +3265,8 @@ function renderRefList(){
 ============================================================ */
 
 function addTeam(){
+
+  if(userRole==='user'){alert('Keine Berechtigung.');return;}
 
   const inp=document.getElementById('teamInput'),name=inp.value.trim();
 
@@ -5902,9 +5952,23 @@ function renderRangliste(){
 
   }
 
+  const rc=ranglisteCols;
+
   html+=`<table class="rangliste-table"><thead><tr>
 
-    <th>#</th><th class="td-name">Team</th><th>Sp</th><th>S</th><th>N</th><th>Pkte</th>
+    <th>#</th><th class="td-name">Team</th>
+
+    ${rc.spi?'<th>Sp</th>':''}
+
+    ${rc.s?'<th>S</th>':''}
+
+    ${rc.u?'<th>U</th>':''}
+
+    ${rc.n?'<th>N</th>':''}
+
+    ${rc.diff?'<th>Diff</th>':''}
+
+    ${rc.pts?'<th>Pkte</th>':''}
 
   </tr></thead><tbody>`;
 
@@ -5912,17 +5976,25 @@ function renderRangliste(){
 
     const pc=i<3?posClass[i]:'';
 
+    const dv=fmtDiff(s.sf||0,s.sa||0);const dc=diffClr(s.sf||0,s.sa||0);
+
     html+=`<tr>
 
       <td><span class="rl-pos ${pc}">${medals[i]||i+1}</span></td>
 
       <td class="td-name" style="font-weight:700">${esc(s.name)}</td>
 
-      <td>${s.played}</td><td style="color:var(--win)">${s.won}</td>
+      ${rc.spi?`<td>${s.played}</td>`:''}
 
-      <td style="color:var(--loss)">${s.lost}</td>
+      ${rc.s?`<td style="color:var(--win)">${s.won}</td>`:''}
 
-      <td class="rl-pts">${s.pts}</td>
+      ${rc.u?`<td style="color:var(--draw)">${s.draw||0}</td>`:''}
+
+      ${rc.n?`<td style="color:var(--loss)">${s.lost}</td>`:''}
+
+      ${rc.diff?`<td style="color:${dc}">${dv}</td>`:''}
+
+      ${rc.pts?`<td class="rl-pts">${s.pts}</td>`:''}
 
     </tr>`;
 
@@ -6676,7 +6748,7 @@ async function registerParticipant(code,role){
 
 async function setParticipantRole(email,role){
 
-  if(userRole!=='admin'||!sessionId)return;
+  if((userRole!=='admin'&&userRole!=='operator')||!sessionId)return;
 
   if(email===SUPERADMIN_EMAIL)return;
 
@@ -6690,7 +6762,7 @@ async function setParticipantRole(email,role){
 
 async function renderParticipants(){
 
-  if(userRole!=='admin'||!sessionId)return;
+  if((userRole!=='admin'&&userRole!=='operator')||!sessionId)return;
 
   const el=document.getElementById('participants-list');
 
@@ -7155,11 +7227,20 @@ function applyRole(role){
 
   const pCard=document.getElementById('participantsCard');
 
-  if(pCard)pCard.style.display=isAdmin?'':'none';
+  if(pCard)pCard.style.display=(isAdmin||isOperator)?'':'none';
 
   const resetBtn=document.getElementById('resetTournamentBtn');
 
-  if(resetBtn){resetBtn.textContent=isAdmin?'Zurücksetzen':'Funktion nicht verfügbar';resetBtn.disabled=!isAdmin;resetBtn.style.display='';}
+  if(resetBtn)resetBtn.style.display=(isAdmin||isOperator)?'':'none';
+
+  const confirmRow=document.getElementById('confirmNextRoundRow');
+
+  if(confirmRow)confirmRow.style.display=(isAdmin||isOperator)?'':'none';
+
+  // Show Schoch settings card if game mode is roundrobin (display preference for all)
+  const sc=document.getElementById('schochSettingsCard');
+
+  if(sc)sc.style.display=gameMode==='roundrobin'?'block':'none';
 
   if(isUser){
 
@@ -7171,7 +7252,7 @@ function applyRole(role){
 
     switchTab('setup');
 
-    if(isAdmin)renderParticipants();
+    if(isAdmin||isOperator)renderParticipants();
 
   }
 
@@ -7243,6 +7324,8 @@ function saveSessionState(){
 
     rounds,currentRound,started,
 
+    timerShow:document.getElementById('timerVisible')?.checked||false,
+
     matchHistory,refHistory,teamPlayCount,
 
     groups,groupPhase,groupMatches,placementRounds,
@@ -7286,6 +7369,8 @@ function loadSessionState(st){
   tournamentFinished=st.tournamentFinished||false;
 
   endspurtActive=st.endspurtActive||false;endspurtTarget=st.endspurtTarget||0;
+
+  if(st.timerShow!==undefined){const tw=document.getElementById('timerVisible');if(tw){tw.checked=st.timerShow;const w=document.getElementById('timerWidget');if(w)w.style.display=st.timerShow?'block':'none';}}
 
   teamIdCounter=st.teamIdCounter||0;slotGlobalCounter=st.slotGlobalCounter||0;officialRefGlobalIdx=st.officialRefGlobalIdx||0;
 
@@ -7422,6 +7507,8 @@ function stopUserSync(){
   try{const dm=localStorage.getItem('fb_diffmode');if(dm)setDiffMode(dm);else setDiffMode('subtract');}catch(e){setDiffMode('subtract');}
 
   try{const eb=localStorage.getItem('fb_endspurtbtnmode');if(eb)setEndspurtBtnMode(eb);else setEndspurtBtnMode('rounds');}catch(e){setEndspurtBtnMode('rounds');}
+
+  try{const rc=localStorage.getItem('fb_ranglistecols');if(rc){const p=JSON.parse(rc);Object.assign(ranglisteCols,p);['spi','s','u','n','diff','pts'].forEach(k=>{const el=document.getElementById('rlc-'+k);if(el)el.checked=!!ranglisteCols[k];});}}catch(e){}
 
   setMode('roundrobin');
 
