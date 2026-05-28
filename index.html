@@ -1794,7 +1794,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
     <h3>🔧 Turnier</h3>
 
-    <div class="settings-row">
+    <div class="settings-row" id="diffModeRow">
 
       <div><div class="sr-label">Diff-Formel</div><div class="sr-desc" id="diffModeDesc">Gemachte − Kassierte Bälle (Differenz)</div></div>
 
@@ -2397,7 +2397,7 @@ function setMode(m){
 
   document.getElementById('cooldownCard').style.display=m==='roundrobin'?'block':'none';
 
-  const sc=document.getElementById('schochSettingsCard');if(sc)sc.style.display=m==='roundrobin'?'block':'none';
+  const sc=document.getElementById('schochSettingsCard');if(sc)sc.style.display=(userRole==='admin'||userRole==='operator')&&m==='roundrobin'?'block':'none';
 
   document.getElementById('teamCard').style.display=isZufall?'none':'';
 
@@ -7237,10 +7237,17 @@ function applyRole(role){
 
   if(confirmRow)confirmRow.style.display=(isAdmin||isOperator)?'':'none';
 
-  // Show Schoch settings card if game mode is roundrobin (display preference for all)
+  // Schoch card: admin/operator only, and only when game mode is roundrobin
   const sc=document.getElementById('schochSettingsCard');
+  if(sc)sc.style.display=(isAdmin||isOperator)&&gameMode==='roundrobin'?'block':'none';
 
-  if(sc)sc.style.display=gameMode==='roundrobin'?'block':'none';
+  // Rangliste cols card: admin/operator only
+  const rlc=document.getElementById('ranglisteColsCard');
+  if(rlc)rlc.style.display=(isAdmin||isOperator)?'':'none';
+
+  // Diff-Formel row: admin/operator only
+  const dmr=document.getElementById('diffModeRow');
+  if(dmr)dmr.style.display=(isAdmin||isOperator)?'':'none';
 
   if(isUser){
 
@@ -7396,7 +7403,7 @@ function refreshAllViews(){
 
   setMode(gameMode);setRefMode(refMode,true);
 
-  const sc=document.getElementById('schochSettingsCard');if(sc)sc.style.display=gameMode==='roundrobin'?'block':'none';
+  const sc=document.getElementById('schochSettingsCard');if(sc)sc.style.display=(userRole==='admin'||userRole==='operator')&&gameMode==='roundrobin'?'block':'none';
 
   // setMode returns early when started=true; restore UI manually
   if(started){
