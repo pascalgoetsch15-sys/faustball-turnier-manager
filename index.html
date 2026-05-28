@@ -1734,6 +1734,24 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
   </div>
 
+  <div class="card" id="schochSettingsCard" style="display:none">
+
+    <h3>🔄 Schoch</h3>
+
+    <div class="settings-row">
+
+      <div><div class="sr-label">Endspurt-Button</div><div class="sr-desc" id="endspurtBtnModeDesc">Zeigt Anzahl benötigter Runden</div></div>
+
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:.75rem;color:var(--muted)">Teams</span>
+        <label class="toggle-sw"><input type="checkbox" id="endspurtBtnModeToggle" checked onchange="setEndspurtBtnMode(this.checked?'rounds':'teams')"><span class="toggle-track"></span></label>
+        <span style="font-size:.75rem;color:var(--muted)">Runden</span>
+      </div>
+
+    </div>
+
+  </div>
+
   <div class="card">
 
     <h3>🔧 Turnier</h3>
@@ -1847,6 +1865,8 @@ let endspurtTarget=0;
 let printLayout='standard';
 
 let diffMode='subtract';
+
+let endspurtBtnMode='rounds';
 
  
 
@@ -2241,6 +2261,16 @@ function setDiffMode(mode){
   renderRangliste();
 }
 
+function setEndspurtBtnMode(mode){
+  endspurtBtnMode=mode;
+  const tog=document.getElementById('endspurtBtnModeToggle');
+  if(tog)tog.checked=(mode==='rounds');
+  const desc=document.getElementById('endspurtBtnModeDesc');
+  if(desc)desc.textContent=mode==='rounds'?'Zeigt Anzahl benötigter Runden':'Zeigt Anzahl Teams mit weniger Spielen';
+  try{localStorage.setItem('fb_endspurtbtnmode',mode);}catch(e){}
+  if(document.getElementById('view-matches')&&document.getElementById('view-matches').classList.contains('active'))renderMatches();
+}
+
 function setPrintLayout(layout){
   printLayout=layout;
   ['minimal','standard','komplett'].forEach(l=>{
@@ -2318,6 +2348,8 @@ function setMode(m){
   document.getElementById('maxConsecCard').style.display=isGroup?'block':'none';
 
   document.getElementById('cooldownCard').style.display=m==='roundrobin'?'block':'none';
+
+  const sc=document.getElementById('schochSettingsCard');if(sc)sc.style.display=m==='roundrobin'?'block':'none';
 
   document.getElementById('teamCard').style.display=isZufall?'none':'';
 
@@ -4045,20 +4077,16 @@ function diffClr(sf,sa){const v=diffMode==='divide'?(sa===0?(sf>0?1:0):sf/sa-1):
 
 function getMinPlayCount(){if(!teams.length)return 0;return Math.min(...teams.map(t=>teamPlayCount[t.id]||0));}
 
-function calcEndspurtRoundsLeft(){
-  if(!endspurtActive||!teams.length)return 0;
+function calcRoundsToTarget(target){
+  if(!teams.length)return 0;
   const counts={};
   teams.forEach(t=>{counts[t.id]=teamPlayCount[t.id]||0;});
-  const totalTeams=teams.length;
   let r=0,maxIter=500;
   while(r<maxIter){
-    const behind=teams.map(t=>t.id).filter(id=>counts[id]<endspurtTarget);
+    const behind=teams.map(t=>t.id).filter(id=>counts[id]<target);
     if(!behind.length)break;
     let eff=behind.length;
-    if(eff%2===1){
-      const hasDone=teams.some(t=>counts[t.id]>=endspurtTarget);
-      if(hasDone)eff++;
-    }
+    if(eff%2===1&&teams.some(t=>counts[t.id]>=target))eff++;
     const fields=Math.min(numFields,refMode==='team'?Math.floor(eff/3):Math.floor(eff/2));
     if(fields===0)break;
     const playing=[...behind].sort((a,b)=>counts[a]-counts[b]).slice(0,fields*2);
@@ -4066,6 +4094,11 @@ function calcEndspurtRoundsLeft(){
     r++;
   }
   return r;
+}
+
+function calcEndspurtRoundsLeft(){
+  if(!endspurtActive)return 0;
+  return calcRoundsToTarget(endspurtTarget);
 }
 
 function getMaxPlayCount(){if(!teams.length)return 0;return Math.max(...teams.map(t=>teamPlayCount[t.id]||0));}
@@ -4652,7 +4685,7 @@ function renderMatches(){
 
       <button class="btn-endspurt" onclick="triggerEndspurt()" ${!canEndspurt?'style="opacity:.4;cursor:not-allowed" disabled':''}>
 
-        ⚖️ Endspurt${unequal?' ('+behind.length+' Team'+(behind.length>1?'s':'')+' hinten)':''}
+        ⚖️ Endspurt${unequal?(endspurtBtnMode==='rounds'?' ('+calcRoundsToTarget(getMaxPlayCount())+' Runde'+(calcRoundsToTarget(getMaxPlayCount())===1?'':'n')+')':' ('+behind.length+' Team'+(behind.length>1?'s':'')+' hinten)'):''}
 
       </button>
 
@@ -7278,6 +7311,8 @@ function refreshAllViews(){
 
   setMode(gameMode);setRefMode(refMode,true);
 
+  const sc=document.getElementById('schochSettingsCard');if(sc)sc.style.display=gameMode==='roundrobin'?'block':'none';
+
   // setMode returns early when started=true; restore UI manually
   if(started){
     // Update mode selector highlight
@@ -7385,6 +7420,8 @@ function stopUserSync(){
   try{const pl=localStorage.getItem('fb_printlayout');if(pl)setPrintLayout(pl);else setPrintLayout('standard');}catch(e){setPrintLayout('standard');}
 
   try{const dm=localStorage.getItem('fb_diffmode');if(dm)setDiffMode(dm);else setDiffMode('subtract');}catch(e){setDiffMode('subtract');}
+
+  try{const eb=localStorage.getItem('fb_endspurtbtnmode');if(eb)setEndspurtBtnMode(eb);else setEndspurtBtnMode('rounds');}catch(e){setEndspurtBtnMode('rounds');}
 
   setMode('roundrobin');
 
