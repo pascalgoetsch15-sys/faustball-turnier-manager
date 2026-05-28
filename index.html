@@ -1678,7 +1678,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
     <h3>⏱ Timer</h3>
 
-    <div class="settings-row">
+    <div class="settings-row" id="timerVisibleRow">
 
       <div><div class="sr-label">Timer anzeigen</div><div class="sr-desc">Spielzeit-Timer im Spielplan-Tab</div></div>
 
@@ -7248,6 +7248,10 @@ function applyRole(role){
   // Diff-Formel row: admin/operator only
   const dmr=document.getElementById('diffModeRow');
   if(dmr)dmr.style.display=(isAdmin||isOperator)?'':'none';
+
+  // Timer-Anzeige row: admin/operator only
+  const tvr=document.getElementById('timerVisibleRow');
+  if(tvr)tvr.style.display=(isAdmin||isOperator)?'':'none';
 
   if(isUser){
 
