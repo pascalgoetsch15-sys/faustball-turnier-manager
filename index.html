@@ -1976,6 +1976,15 @@ const guiScaleMap={1:.5,2:.64,3:.78,4:.92,5:1.07,6:1.25,7:1.45,8:1.68,9:1.95};
 
 const guiScaleLabels={1:'Winzig (1) — ~7px',2:'Sehr Klein (2) — ~9px',3:'Klein (3) — ~11px',4:'Klein-Mittel (4) — ~13px',5:'Normal (5) — 15px',6:'Gross (6) — ~17px',7:'Sehr Gross (7) — ~20px',8:'Riesig (8) — ~24px',9:'Maximal (9) — ~27px'};
 
+function syncFixed(){
+  const hdr=document.querySelector('header');
+  const tabs=document.getElementById('mainTabs');
+  if(!hdr||!tabs)return;
+  const hh=hdr.offsetHeight;
+  tabs.style.top=hh+'px';
+  document.body.style.paddingTop=(hh+tabs.offsetHeight)+'px';
+}
+
 function setGuiScale(v){
 
   guiScale=parseInt(v);
@@ -2001,6 +2010,8 @@ function setGuiScale(v){
   if(si)si.textContent=guiScaleLabels[guiScale];
 
   try{localStorage.setItem('fb_guiscale',guiScale);}catch(e){}
+
+  requestAnimationFrame(syncFixed);
 
 }
 
@@ -7571,6 +7582,10 @@ function stopUserSync(){
   // Auth screen is visible by default until Firebase resolves
 
   switchTab('setup');
+
+  requestAnimationFrame(syncFixed);
+
+  window.addEventListener('resize',syncFixed);
 
 })();
 
