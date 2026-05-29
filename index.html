@@ -4260,15 +4260,13 @@ function rid(){return Math.random().toString(36).slice(2,10);}
  
 
 function generateRoundAndCompleteCycle(isFirst){
-  // When schochFullCycle is ON, auto-generate all rounds of the current cycle at once.
-  // preCycleMin = play count floor before this cycle started (all teams must rise above it).
   const preCycleMin=teams.length?(isFirst?0:Math.min(...teams.map(t=>teamPlayCount[t.id]||0))):0;
   generateRound(isFirst);
   if(!schochFullCycle||endspurtActive)return;
   let safety=200;
   while(safety-- >0){
     const curMin=Math.min(...teams.map(t=>teamPlayCount[t.id]||0));
-    if(curMin>preCycleMin)break; // all teams have played at least once this cycle
+    if(curMin>preCycleMin)break;
     generateRound(false);
   }
 }
@@ -4664,6 +4662,8 @@ function renderMatches(){
  
 
   // Render all rounds
+  // Only the FIRST incomplete round is active (allows score entry)
+  const firstUndoneRi=rounds.findIndex(slots=>!slots.every(s=>s.done&&s.matches.every(m=>m.done)));
 
   rounds.forEach((slots,ri)=>{
 
@@ -4685,7 +4685,7 @@ function renderMatches(){
 
       const sDone=slot.matches.every(m=>m.done);
 
-      const isActive=ri===rounds.length-1;
+      const isActive=ri===firstUndoneRi;
 
       const hasRelaxed=slot.matches.some(m=>m.cooldownRelaxed);
 
@@ -5482,6 +5482,8 @@ function submitRRScore(id){
 
   let found=false;
 
+  const firstUndoneRi=rounds.findIndex(slots=>!slots.every(s=>s.done&&s.matches.every(m=>m.done)));
+
   for(let ri=0;ri<rounds.length;ri++){
 
     for(let si=0;si<rounds[ri].length;si++){
@@ -5491,6 +5493,8 @@ function submitRRScore(id){
         const m=rounds[ri][si].matches[mi];
 
         if(m.id!==id)continue;
+
+        if(ri!==firstUndoneRi){alert('Bitte zuerst alle Ergebnisse von Runde '+(firstUndoneRi+1)+' eintragen.');return;}
 
         const sa=parseInt(document.getElementById('sa-'+id)?.value);
 
