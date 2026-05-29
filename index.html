@@ -1748,6 +1748,14 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
     </div>
 
+    <div class="settings-row">
+
+      <div><div class="sr-label">Alle 1× pro Zyklus</div><div class="sr-desc">Nur Teams ohne Spiel kommen dran; bei ungerader Anzahl spielt der Tabellen-Letzte 1× mehr</div></div>
+
+      <label class="toggle-sw"><input type="checkbox" id="schochFullCycleToggle" onchange="setSchochFullCycle(this.checked)"><span class="toggle-track"></span></label>
+
+    </div>
+
   </div>
 
   <div class="card" id="ranglisteColsCard">
@@ -1903,6 +1911,8 @@ let printLayout='standard';
 let diffMode='subtract';
 
 let endspurtBtnMode='rounds';
+
+let schochFullCycle=false;
 
 let ranglisteCols={spi:true,s:true,u:false,n:false,diff:true,pts:true};
 
@@ -2320,6 +2330,13 @@ function setEndspurtBtnMode(mode){
   if(desc)desc.textContent=mode==='rounds'?'Zeigt Anzahl benötigter Runden':'Zeigt Anzahl Teams mit weniger Spielen';
   try{localStorage.setItem('fb_endspurtbtnmode',mode);}catch(e){}
   if(document.getElementById('view-matches')&&document.getElementById('view-matches').classList.contains('active'))renderMatches();
+}
+
+function setSchochFullCycle(v){
+  schochFullCycle=!!v;
+  const tog=document.getElementById('schochFullCycleToggle');
+  if(tog)tog.checked=schochFullCycle;
+  saveSessionState();
 }
 
 function setRanglisteCol(col,val){
@@ -4281,6 +4298,23 @@ function generateRound(isFirst){
     if(needed>0&&needed<ef)ef=needed;
   }
 
+  // schochFullCycle: only pair teams at the current minimum play count
+  // if pool is odd, last-place "done" team plays one extra time
+  let fullCyclePool=null;
+  if(schochFullCycle&&!isFirst&&!endspurtActive){
+    const minPlays=teams.length?Math.min(...teams.map(t=>teamPlayCount[t.id]||0)):0;
+    const behind=ordered.filter(id=>(teamPlayCount[id]||0)===minPlays);
+    let pool=[...behind];
+    if(pool.length%2===1){
+      const st=getStandings();
+      const done=st.filter(s=>(teamPlayCount[s.id]||0)>minPlays);
+      if(done.length>0)pool=[...pool,done[done.length-1].id];
+    }
+    fullCyclePool=pool;
+    const needed=Math.floor(pool.length/2);
+    if(needed>0&&needed<ef)ef=needed;
+  }
+
   if(ef===0){
 
     rounds.push([{matches:[],done:true,pauseTeamIds:ordered,refTeamIds:[],officialRefs:[],slotIdx:slotGlobalCounter++}]);
@@ -4303,7 +4337,9 @@ function generateRound(isFirst){
 
     const tentRef=sortedRef.slice(0,ef);
 
-    const nonRef=ordered.filter(id=>!tentRef.includes(id));
+    const nonRef=fullCyclePool
+      ?ordered.filter(id=>fullCyclePool.includes(id)&&!tentRef.includes(id))
+      :ordered.filter(id=>!tentRef.includes(id));
 
     const pairs=pairTeamsEqualPlays(nonRef,currentRound,opponentCooldown);
 
@@ -4358,12 +4394,14 @@ function generateRound(isFirst){
       pairPool=ordered.filter(id=>(teamPlayCount[id]||0)<endspurtTarget);
       if(endspurtBonusTeamId)pairPool=[...pairPool,endspurtBonusTeamId];
       if(endspurtBonusTeamId!==null)pairCd=0;
+    }else if(fullCyclePool){
+      pairPool=fullCyclePool;
     }
     const pairs=pairTeamsEqualPlays(pairPool,currentRound,pairCd);
 
     let realPairs=pairs.filter(p=>p.b!=='PAUSE').slice(0,ef);
-    // Fill remaining fields using unpaired teams with relaxed cooldown (not during Endspurt)
-    if(!endspurtActive&&realPairs.length<ef){
+    // Fill remaining fields using unpaired teams with relaxed cooldown (not during Endspurt/fullCycle)
+    if(!endspurtActive&&!fullCyclePool&&realPairs.length<ef){
       const used=new Set(realPairs.flatMap(p=>[p.a,p.b]));
       const avail=ordered.filter(id=>!used.has(id));
       if(avail.length>=2){
@@ -7354,7 +7392,7 @@ function saveSessionState(){
 
     teams,referees,refMode,numFields,opponentCooldown,
 
-    gameMode,numGroups,maxConsecutive,scoring,
+    gameMode,numGroups,maxConsecutive,scoring,schochFullCycle,
 
     rounds,currentRound,started,
 
@@ -7389,6 +7427,8 @@ function loadSessionState(st){
   numFields=st.numFields||3;opponentCooldown=st.opponentCooldown||6;
 
   gameMode=st.gameMode||'roundrobin';numGroups=st.numGroups||2;maxConsecutive=st.maxConsecutive||2;
+  schochFullCycle=st.schochFullCycle||false;
+  const sfc=document.getElementById('schochFullCycleToggle');if(sfc)sfc.checked=schochFullCycle;
 
   scoring=st.scoring||scoring;
 
