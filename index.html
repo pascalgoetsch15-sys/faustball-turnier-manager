@@ -48,9 +48,9 @@ body.light{
 
 html{font-size:calc(14px * var(--gui-scale))}
 
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;padding:0 0 80px;transition:background .3s,color .3s}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;padding:110px 0 80px;transition:background .3s,color .3s}
 
-header{background:var(--header-bg);border-bottom:2px solid var(--accent);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;gap:18px;position:sticky;top:0;z-index:200;box-shadow:0 4px 30px rgba(249,115,22,.15)}
+header{background:var(--header-bg);border-bottom:2px solid var(--accent);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;gap:18px;position:fixed;top:0;left:0;right:0;z-index:200;box-shadow:0 4px 30px rgba(249,115,22,.15)}
 
 .logo{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:3px;color:var(--accent);line-height:1}
 
@@ -58,7 +58,7 @@ header{background:var(--header-bg);border-bottom:2px solid var(--accent);padding
 
 .header-mode-badge{font-family:'Bebas Neue',sans-serif;font-size:.85rem;letter-spacing:2px;background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.4);color:var(--accent);border-radius:8px;padding:5px 14px;white-space:nowrap;display:none}
 
-.tabs{display:flex;border-bottom:1px solid var(--border);padding:0 32px;background:var(--surface);overflow-x:auto;position:sticky;top:68px;z-index:100;transition:background .3s}
+.tabs{display:flex;border-bottom:1px solid var(--border);padding:0 32px;background:var(--surface);overflow-x:auto;position:fixed;top:68px;left:0;right:0;z-index:100;transition:background .3s}
 
 .tab{padding:13px 20px;font-size:.8rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;color:var(--muted)}
 
@@ -679,7 +679,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
 }
 
-@media(max-width:600px){header{padding:14px 18px}.view{padding:16px 14px}.tabs{padding:0 14px;top:60px}.fields-grid{grid-template-columns:1fr}.timer-display{font-size:3.5rem}.podium{gap:4px}.podium-step{min-width:90px}}
+@media(max-width:600px){body{padding-top:102px}header{padding:14px 18px}.view{padding:16px 14px}.tabs{padding:0 14px;top:60px}.fields-grid{grid-template-columns:1fr}.timer-display{font-size:3.5rem}.podium{gap:4px}.podium-step{min-width:90px}}
 
  
 
