@@ -59,8 +59,6 @@ header{background:var(--header-bg);border-bottom:2px solid var(--accent);padding
 .header-mode-badge{font-family:'Bebas Neue',sans-serif;font-size:.85rem;letter-spacing:2px;background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.4);color:var(--accent);border-radius:8px;padding:5px 14px;white-space:nowrap;display:none}
 
 .tabs{display:flex;border-bottom:1px solid var(--border);padding:0 32px;background:var(--surface);overflow-x:auto;position:sticky;top:68px;z-index:100;transition:background .3s}
-#timerGlobalWrap{position:sticky;top:110px;z-index:95;background:var(--bg);padding:12px 32px 0}
-#timerGlobalWrap .timer-widget{max-width:980px;margin:0 auto}
 
 .tab{padding:13px 20px;font-size:.8rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;color:var(--muted)}
 
@@ -681,7 +679,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
 }
 
-@media(max-width:600px){header{padding:14px 18px}.view{padding:16px 14px}.tabs{padding:0 14px;top:60px}#timerGlobalWrap{top:101px;padding:8px 14px 0}.fields-grid{grid-template-columns:1fr}.timer-display{font-size:3.5rem}.podium{gap:4px}.podium-step{min-width:90px}}
+@media(max-width:600px){header{padding:14px 18px}.view{padding:16px 14px}.tabs{padding:0 14px;top:60px}.fields-grid{grid-template-columns:1fr}.timer-display{font-size:3.5rem}.podium{gap:4px}.podium-step{min-width:90px}}
 
  
 
@@ -1157,59 +1155,6 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
 </div>
 
-<!-- GLOBAL TIMER (visible across all tabs) -->
-<div id="timerGlobalWrap" style="display:none">
-  <div class="timer-widget" id="timerWidget">
-
-    <div class="timer-row1">
-
-      <span class="timer-label-txt">⏱ Spielzeit-Timer</span>
-
-      <span id="overtimeBadge" style="display:none"><span class="overtime-badge">🔴 Nachspielzeit</span></span>
-
-    </div>
-
-    <div class="timer-display" id="timerDisplay">15:00</div>
-
-    <div class="timer-bar-wrap"><div class="timer-bar" id="timerBar" style="width:100%;background:var(--accent)"></div></div>
-
-    <div class="timer-controls" id="timerControls">
-
-      <button class="btn-primary" id="timerBtn" onclick="timerToggle()">▶ Start</button>
-
-      <button class="btn-ghost" onclick="timerReset()">↺ Reset</button>
-
-    </div>
-
-    <div class="timer-presets" id="timerPresets">
-
-      <span class="timer-presets-label">Dauer:</span>
-
-      <button class="preset-btn" onclick="setDur(5,this)">5 min</button>
-
-      <button class="preset-btn" onclick="setDur(10,this)">10 min</button>
-
-      <button class="preset-btn active" onclick="setDur(15,this)">15 min</button>
-
-      <button class="preset-btn" onclick="setDur(20,this)">20 min</button>
-
-      <button class="preset-btn" onclick="setDur(30,this)">30 min</button>
-
-    </div>
-
-    <div class="timer-custom-row" id="timerCustomRow">
-
-      <span class="timer-presets-label">Eigene Zeit:</span>
-
-      <input type="number" id="customMin" min="1" max="999" placeholder="min" style="width:80px">
-
-      <button class="preset-btn" onclick="setCustomDur()">Setzen</button>
-
-    </div>
-
-  </div>
-</div>
-
 <!-- SETUP -->
 
 <div class="view active" id="view-setup">
@@ -1584,6 +1529,56 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
     <h2 style="margin-bottom:0">Tabelle</h2>
 
     <div id="standingsPrintBtns" style="display:none;gap:8px;flex-wrap:wrap"></div>
+
+  </div>
+
+  <div class="timer-widget" id="timerWidget" style="display:none">
+
+    <div class="timer-row1">
+
+      <span class="timer-label-txt">⏱ Spielzeit-Timer</span>
+
+      <span id="overtimeBadge" style="display:none"><span class="overtime-badge">🔴 Nachspielzeit</span></span>
+
+    </div>
+
+    <div class="timer-display" id="timerDisplay">15:00</div>
+
+    <div class="timer-bar-wrap"><div class="timer-bar" id="timerBar" style="width:100%;background:var(--accent)"></div></div>
+
+    <div class="timer-controls" id="timerControls">
+
+      <button class="btn-primary" id="timerBtn" onclick="timerToggle()">▶ Start</button>
+
+      <button class="btn-ghost" onclick="timerReset()">↺ Reset</button>
+
+    </div>
+
+    <div class="timer-presets" id="timerPresets">
+
+      <span class="timer-presets-label">Dauer:</span>
+
+      <button class="preset-btn" onclick="setDur(5,this)">5 min</button>
+
+      <button class="preset-btn" onclick="setDur(10,this)">10 min</button>
+
+      <button class="preset-btn active" onclick="setDur(15,this)">15 min</button>
+
+      <button class="preset-btn" onclick="setDur(20,this)">20 min</button>
+
+      <button class="preset-btn" onclick="setDur(30,this)">30 min</button>
+
+    </div>
+
+    <div class="timer-custom-row" id="timerCustomRow">
+
+      <span class="timer-presets-label">Eigene Zeit:</span>
+
+      <input type="number" id="customMin" min="1" max="999" placeholder="min" style="width:80px">
+
+      <button class="preset-btn" onclick="setCustomDur()">Setzen</button>
+
+    </div>
 
   </div>
 
@@ -2181,7 +2176,7 @@ function toggleTimerVisible(){
 
   const show=document.getElementById('timerVisible').checked;
 
-  const tgw=document.getElementById('timerGlobalWrap');if(tgw)tgw.style.display=show?'':'none';
+  document.getElementById('timerWidget').style.display=show?'block':'none';
 
   if(!show){clearInterval(timerInterval);timerRunning=false;}
 
@@ -2191,21 +2186,21 @@ function toggleTimerVisible(){
 
 function updateTimerForMode(){
 
-  const wrap=document.getElementById('timerGlobalWrap');
+  const widget=document.getElementById('timerWidget');
 
   const tw=document.getElementById('timerVisible');
 
-  if(!wrap||!tw)return;
+  if(!widget||!tw)return;
 
   if(gameMode==='gruppensaetze'){
 
     if(timerRunning){clearInterval(timerInterval);timerRunning=false;}
 
-    wrap.style.display='none';tw.checked=false;
+    widget.style.display='none';tw.checked=false;
 
   } else {
 
-    if(tw.checked)wrap.style.display='';
+    if(tw.checked)widget.style.display='block';
 
   }
 
@@ -7398,7 +7393,7 @@ function loadSessionState(st){
 
   endspurtActive=st.endspurtActive||false;endspurtTarget=st.endspurtTarget||0;
 
-  if(st.timerShow!==undefined){const tw=document.getElementById('timerVisible');if(tw){tw.checked=st.timerShow;const w=document.getElementById('timerGlobalWrap');if(w)w.style.display=st.timerShow?'':'none';}}
+  if(st.timerShow!==undefined){const tw=document.getElementById('timerVisible');if(tw){tw.checked=st.timerShow;const w=document.getElementById('timerWidget');if(w)w.style.display=st.timerShow?'block':'none';}}
 
   teamIdCounter=st.teamIdCounter||0;slotGlobalCounter=st.slotGlobalCounter||0;officialRefGlobalIdx=st.officialRefGlobalIdx||0;
 
