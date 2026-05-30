@@ -4382,7 +4382,10 @@ function generateRound(isFirst){
 
   if(refMode==='team'){
 
-    const sortedRef=[...ordered].sort((a,b)=>{
+    // Bug1-fix: exclude bonus team from refs so it stays as a player during endspurt
+    const sortedRef=[...ordered]
+      .filter(id=>!(endspurtActive&&endspurtBonusTeamId&&id===endspurtBonusTeamId))
+      .sort((a,b)=>{
 
       const pd=(teamPlayCount[b]||0)-(teamPlayCount[a]||0);
 
@@ -4394,15 +4397,23 @@ function generateRound(isFirst){
 
     const tentRef=sortedRef.slice(0,ef);
 
+    // Bug3-fix: during endspurt restrict pair pool to teams below target + bonus
+    const endspurtPool=endspurtActive
+      ?ordered.filter(id=>(teamPlayCount[id]||0)<endspurtTarget).concat(endspurtBonusTeamId?[endspurtBonusTeamId]:[])
+      :null;
     const nonRef=fullCyclePool
       ?ordered.filter(id=>fullCyclePool.includes(id)&&!tentRef.includes(id))
-      :ordered.filter(id=>!tentRef.includes(id));
+      :endspurtPool
+        ?endspurtPool.filter(id=>!tentRef.includes(id))
+        :ordered.filter(id=>!tentRef.includes(id));
 
-    const pairs=pairTeamsEqualPlays(nonRef,currentRound,opponentCooldown);
+    // Bug1-fix: relax cooldown when bonus team is present (mirrors else-branch logic)
+    const teamRefPairCd=endspurtActive&&endspurtBonusTeamId!==null?0:opponentCooldown;
+    const pairs=pairTeamsEqualPlays(nonRef,currentRound,teamRefPairCd);
 
     let realPairs=pairs.filter(p=>p.b!=='PAUSE').slice(0,ef);
-    // Fill remaining fields using paused teams with relaxed cooldown
-    if(realPairs.length<ef){
+    // Bug2-fix: fill only when not in endspurt (mirrors else-branch guard)
+    if(!endspurtActive&&realPairs.length<ef){
       const used=new Set(realPairs.flatMap(p=>[p.a,p.b]));
       const avail=ordered.filter(id=>!used.has(id)&&!tentRef.includes(id));
       if(avail.length>=2){
