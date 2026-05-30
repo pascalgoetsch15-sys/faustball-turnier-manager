@@ -1750,9 +1750,21 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
     <div class="settings-row">
 
-      <div><div class="sr-label">Alle 1× pro Zyklus</div><div class="sr-desc">Nur Teams ohne Spiel kommen dran; bei ungerader Anzahl spielt der Tabellen-Letzte 1× mehr</div></div>
+      <div><div class="sr-label">Alle 1× pro Zyklus</div><div class="sr-desc">Nur Teams ohne Spiel kommen dran</div></div>
 
       <label class="toggle-sw"><input type="checkbox" id="schochFullCycleToggle" onchange="setSchochFullCycle(this.checked)"><span class="toggle-track"></span></label>
+
+    </div>
+
+    <div class="settings-row" id="schochOddModeRow" style="display:none">
+
+      <div><div class="sr-label">Ungerade Teamanzahl</div><div class="sr-desc" id="schochOddModeDesc">Tabellen-Letzter spielt 1× mehr</div></div>
+
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:.75rem;color:var(--muted)">Pause</span>
+        <label class="toggle-sw"><input type="checkbox" id="schochOddModeToggle" checked onchange="setSchochOddMode(this.checked?'bonus':'pause')"><span class="toggle-track"></span></label>
+        <span style="font-size:.75rem;color:var(--muted)">2× spielt</span>
+      </div>
 
     </div>
 
@@ -1924,7 +1936,7 @@ let diffMode='subtract';
 
 let endspurtBtnMode='rounds';
 
-let schochFullCycle=false;
+let schochFullCycle=false,schochOddMode='bonus';
 
 let ranglisteCols={spi:true,s:true,u:false,n:false,diff:true,pts:true};
 
@@ -2356,6 +2368,17 @@ function setSchochFullCycle(v){
   schochFullCycle=!!v;
   const tog=document.getElementById('schochFullCycleToggle');
   if(tog)tog.checked=schochFullCycle;
+  const row=document.getElementById('schochOddModeRow');
+  if(row)row.style.display=schochFullCycle?'':'none';
+  saveSessionState();
+}
+
+function setSchochOddMode(mode){
+  schochOddMode=mode;
+  const tog=document.getElementById('schochOddModeToggle');
+  if(tog)tog.checked=(mode==='bonus');
+  const desc=document.getElementById('schochOddModeDesc');
+  if(desc)desc.textContent=mode==='bonus'?'Tabellen-Letzter spielt 1× mehr':'Ein Team hat Pause pro Zyklus';
   saveSessionState();
 }
 
@@ -4286,7 +4309,9 @@ function generateRoundAndCompleteCycle(isFirst){
   let safety=200;
   while(safety-- >0){
     const curMin=Math.min(...teams.map(t=>teamPlayCount[t.id]||0));
-    if(curMin>preCycleMin)break;
+    if(curMin>preCycleMin)break; // all teams advanced
+    const behind=teams.filter(t=>(teamPlayCount[t.id]||0)===preCycleMin);
+    if(behind.length===1&&schochOddMode==='pause')break; // odd one out sits out this cycle
     generateRound(false);
   }
 }
@@ -4337,7 +4362,7 @@ function generateRound(isFirst){
     const minPlays=teams.length?Math.min(...teams.map(t=>teamPlayCount[t.id]||0)):0;
     const behind=ordered.filter(id=>(teamPlayCount[id]||0)===minPlays);
     let pool=[...behind];
-    if(pool.length%2===1){
+    if(pool.length%2===1&&schochOddMode==='bonus'){
       const st=getStandings();
       const done=st.filter(s=>(teamPlayCount[s.id]||0)>minPlays);
       if(done.length>0)pool=[...pool,done[done.length-1].id];
@@ -7430,7 +7455,7 @@ function saveSessionState(){
 
     teams,referees,refMode,numFields,opponentCooldown,
 
-    gameMode,numGroups,maxConsecutive,scoring,schochFullCycle,
+    gameMode,numGroups,maxConsecutive,scoring,schochFullCycle,schochOddMode,
 
     rounds,currentRound,started,
 
@@ -7466,7 +7491,11 @@ function loadSessionState(st){
 
   gameMode=st.gameMode||'roundrobin';numGroups=st.numGroups||2;maxConsecutive=st.maxConsecutive||2;
   schochFullCycle=st.schochFullCycle||false;
+  schochOddMode=st.schochOddMode||'bonus';
   const sfc=document.getElementById('schochFullCycleToggle');if(sfc)sfc.checked=schochFullCycle;
+  const som=document.getElementById('schochOddModeRow');if(som)som.style.display=schochFullCycle?'':'none';
+  const somt=document.getElementById('schochOddModeToggle');if(somt)somt.checked=(schochOddMode==='bonus');
+  const somd=document.getElementById('schochOddModeDesc');if(somd)somd.textContent=schochOddMode==='bonus'?'Tabellen-Letzter spielt 1× mehr':'Ein Team hat Pause pro Zyklus';
 
   scoring=st.scoring||scoring;
 
