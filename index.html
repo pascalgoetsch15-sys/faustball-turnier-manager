@@ -5079,11 +5079,11 @@ function renderMatches(){
 
  
 
-  // Render all rounds
-  // Only the FIRST incomplete round is active (allows score entry)
+  // Render rounds up to and including the current active round (hide future pre-generated rounds)
   const firstUndoneRi=rounds.findIndex(slots=>!slots.every(s=>s.done&&s.matches.every(m=>m.done)));
+  const visibleRounds=firstUndoneRi>=0?rounds.slice(0,firstUndoneRi+1):rounds;
 
-  rounds.forEach((slots,ri)=>{
+  visibleRounds.forEach((slots,ri)=>{
 
     const rDone=slots.every(s=>s.done&&s.matches.every(m=>m.done));
 
@@ -5151,7 +5151,7 @@ function renderMatches(){
 
         '<div class="slot-progress"><div class="slot-progress-fill" style="width:'+Math.round(tot?done/tot*100:100)+'%"></div></div>'+
 
-        '<div class="fields-grid">'+pm.map(m=>rrMatchCard(m,isActive&&!sDone,ri===rounds.length-1)).join('')+'</div></div>';
+        '<div class="fields-grid">'+pm.map(m=>rrMatchCard(m,isActive&&!sDone,ri===visibleRounds.length-1)).join('')+'</div></div>';
 
     });
 
@@ -5491,7 +5491,7 @@ function buildRemoteGroupStandingsHtml(){
         </tr></thead><tbody>`;
     gs.forEach((s,i)=>{
       const adv=effAdv>0&&i<effAdv;
-      const dv=isZeit?fmtDiff(s.sf,s.sa):(s.satsPts+'-'+s.satsAgainst);
+      const dv=isZeit?fmtDiff(s.sf,s.sa):(s.satsPts+':'+s.satsAgainst);
       const dc=isZeit?diffClr(s.sf,s.sa):'var(--muted)';
       html+=`<tr style="background:${adv?'rgba(34,197,94,.1)':'var(--surface2)'}">
         <td style="padding:10px 8px;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:${adv?'var(--win)':'var(--muted)'};text-align:center;border-radius:8px 0 0 8px">${i+1}</td>
@@ -5620,11 +5620,14 @@ function updateRemoteWindow(){
 
 function reopenMatch(id){
 
-  const lastRound=rounds[rounds.length-1];
+  // Find the most recent round containing this match (current active or last done)
+  const firstUndoneRi=rounds.findIndex(slots=>!slots.every(s=>s.done&&s.matches.every(m=>m.done)));
+  const targetRi=firstUndoneRi>=0?firstUndoneRi:rounds.length-1;
+  const targetRound=rounds[targetRi];
 
-  if(!lastRound)return;
+  if(!targetRound)return;
 
-  for(const slot of lastRound){
+  for(const slot of targetRound){
 
     const m=slot.matches.find(x=>x.id===id);
 
@@ -6029,7 +6032,7 @@ function renderStandingsTable(gs,isZeit,highlightTop){
 
   gs.forEach((s,i)=>{
 
-    const satzeStr=s.satsPts+'-'+s.satsAgainst;
+    const satzeStr=s.satsPts+':'+s.satsAgainst;
 
     const diffVal=isZeit?fmtDiff(s.sf,s.sa):satzeStr;
 
