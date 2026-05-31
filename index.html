@@ -1666,6 +1666,27 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
     </div>
   </div>
 
+  <div class="card">
+    <h3>🎨 Erscheinungsbild (Remote)</h3>
+    <p style="color:var(--muted);font-size:.85rem;margin-bottom:14px">Unabhängig vom Haupt-App-Design.</p>
+    <div class="theme-cards" style="margin-bottom:16px">
+      <button class="theme-card sel" id="rtdark" onclick="setRemoteTheme('dark')"><div class="t-icon">🌙</div><div>Dark Mode</div></button>
+      <button class="theme-card" id="rtlight" onclick="setRemoteTheme('light')"><div class="t-icon">☀️</div><div>Light Mode</div></button>
+    </div>
+    <div id="remoteBgCard">
+      <div style="font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Hintergrundfarbe (Dark Mode)</div>
+      <div class="bg-swatches">
+        <button class="bg-swatch sel" id="rbgt-standard" onclick="setRemoteBgTheme('standard')" title="Standard" style="background:#0a0c10"></button>
+        <button class="bg-swatch" id="rbgt-schwarz" onclick="setRemoteBgTheme('schwarz')" title="Schwarz" style="background:#050505"></button>
+        <button class="bg-swatch" id="rbgt-blau" onclick="setRemoteBgTheme('blau')" title="Nacht-Blau" style="background:#060c18"></button>
+        <button class="bg-swatch" id="rbgt-gruen" onclick="setRemoteBgTheme('gruen')" title="Nacht-Grün" style="background:#06100a"></button>
+        <button class="bg-swatch" id="rbgt-lila" onclick="setRemoteBgTheme('lila')" title="Nacht-Lila" style="background:#0c0814"></button>
+        <button class="bg-swatch" id="rbgt-grau" onclick="setRemoteBgTheme('grau')" title="Dunkelgrau" style="background:#111111"></button>
+      </div>
+      <div id="remoteBgThemeLabel" style="font-size:.75rem;color:var(--muted);margin-top:6px">Standard</div>
+    </div>
+  </div>
+
   <div class="card" id="remoteRotateCard" style="display:none">
     <h3>⏱ Rotation</h3>
     <div class="settings-row">
@@ -2004,6 +2025,7 @@ let tournamentFinished=false,guiScale=3;
 let remoteWin=null;
 let remoteViews={spielplan:true,tabelle:false,rangliste:false};
 let remoteRotateSec=10,remoteRotateTimer=null,remoteCurrentView='spielplan';
+let remoteTheme='dark',remoteBgTheme='standard';
 
 // Zufall mode state
 let zufallMen=[],zufallWomen=[],zufallSameGender=true;
@@ -5288,6 +5310,43 @@ function setRemoteRotateSec(n){
   restartRemoteRotation();
 }
 
+function setRemoteTheme(t){
+  remoteTheme=t;
+  document.getElementById('rtdark').classList.toggle('sel',t==='dark');
+  document.getElementById('rtlight').classList.toggle('sel',t==='light');
+  const bgCard=document.getElementById('remoteBgCard');
+  if(bgCard)bgCard.style.display=t==='light'?'none':'';
+  try{localStorage.setItem('fb_remote_theme',t);}catch(e){}
+  updateRemoteWindow();
+}
+
+function setRemoteBgTheme(name){
+  remoteBgTheme=name;
+  document.querySelectorAll('[id^="rbgt-"]').forEach(el=>{
+    el.classList.toggle('sel',el.id==='rbgt-'+name);
+  });
+  const lbl=document.getElementById('remoteBgThemeLabel');
+  if(lbl)lbl.textContent=(_bgThemes[name]||_bgThemes.standard).label;
+  try{localStorage.setItem('fb_remote_bgtheme',name);}catch(e){}
+  updateRemoteWindow();
+}
+
+function _applyRemoteThemeToWin(){
+  if(!remoteWin||remoteWin.closed)return;
+  const isLight=remoteTheme==='light';
+  remoteWin.document.body.classList.toggle('light',isLight);
+  const rs=remoteWin.document.documentElement.style;
+  if(!isLight){
+    const rbg=_bgThemes[remoteBgTheme]||_bgThemes.standard;
+    rs.setProperty('--bg',rbg.bg);
+    rs.setProperty('--surface',rbg.surface);
+    rs.setProperty('--surface2',rbg.surface2);
+    rs.setProperty('--border',rbg.border);
+  }else{
+    ['--bg','--surface','--surface2','--border'].forEach(p=>rs.removeProperty(p));
+  }
+}
+
 function updateRemoteControls(){
   const rlTog=document.getElementById('remoteViewRangliste');
   const rlDesc=document.getElementById('remoteRanglisteDesc');
@@ -5318,6 +5377,7 @@ function _buildRemoteGroupMatchCard(m,active){
   const isSaetze=gameMode==='gruppensaetze';
   const nA=esc(tname(m.teamAId)),nB=esc(tname(m.teamBId));
   const fieldNum=m.fieldNum||'?';
+  const refLine=m.officialRef?`<div style="font-size:.78rem;color:#818cf8;letter-spacing:1px;margin-top:5px">🟣 ${esc(m.officialRef)}</div>`:'';
   if(m.done){
     if(isSaetze){
       let aw=0,bw=0;(m.sets||[]).forEach(([sa,sb])=>{if(sa>sb)aw++;else if(sb>sa)bw++;});
@@ -5331,6 +5391,7 @@ function _buildRemoteGroupMatchCard(m,active){
         </div>
         <div style="font-size:.75rem;color:var(--muted);margin-bottom:6px">${(m.sets||[]).map(([sa,sb],i)=>`S${i+1}: ${sa}:${sb}`).join(' · ')}</div>
         <div style="font-size:.78rem;color:var(--win);letter-spacing:1px">✓ Fertig</div>
+        ${refLine}
       </div>`;
     }else{
       const aW=m.scoreA>m.scoreB,draw=m.scoreA===m.scoreB;
@@ -5342,6 +5403,7 @@ function _buildRemoteGroupMatchCard(m,active){
           <span style="font-size:1.5rem;font-weight:700;color:${!aW&&!draw?'var(--win)':draw?'var(--text)':'var(--muted)'};flex:1;text-align:left">${nB}</span>
         </div>
         <div style="font-size:.78rem;color:var(--win);letter-spacing:1px">✓ Fertig</div>
+        ${refLine}
       </div>`;
     }
   }else{
@@ -5353,11 +5415,13 @@ function _buildRemoteGroupMatchCard(m,active){
         <span style="font-size:1.5rem;font-weight:700;color:var(--text);flex:1;text-align:left">${nB}</span>
       </div>
       <div style="font-size:.78rem;color:${active?'var(--accent)':'var(--muted)'};letter-spacing:1px">${active?'⏱ Laufend':'Ausstehend'}</div>
+      ${refLine}
     </div>`;
   }
 }
 
-function _buildRemoteMatchCard(nA,nB,fieldNum,done,scoreA,scoreB,active){
+function _buildRemoteMatchCard(nA,nB,fieldNum,done,scoreA,scoreB,active,ref){
+  const refLine=ref?`<div style="font-size:.78rem;color:#818cf8;letter-spacing:1px;margin-top:5px">🟣 ${esc(ref)}</div>`:'';
   if(done){
     const aW=scoreA>scoreB,draw=scoreA===scoreB;
     return `<div style="background:var(--surface2);border:2px solid var(--win);border-radius:14px;padding:22px 18px;text-align:center">
@@ -5368,6 +5432,7 @@ function _buildRemoteMatchCard(nA,nB,fieldNum,done,scoreA,scoreB,active){
         <span style="font-size:1.5rem;font-weight:700;color:${!aW&&!draw?'var(--win)':draw?'var(--text)':'var(--muted)'};flex:1;text-align:left">${nB}</span>
       </div>
       <div style="font-size:.78rem;color:var(--win);letter-spacing:1px">✓ Fertig</div>
+      ${refLine}
     </div>`;
   }else{
     return `<div style="background:var(--surface2);border:2px solid ${active?'var(--accent)':'var(--border)'};border-radius:14px;padding:22px 18px;text-align:center">
@@ -5378,6 +5443,7 @@ function _buildRemoteMatchCard(nA,nB,fieldNum,done,scoreA,scoreB,active){
         <span style="font-size:1.5rem;font-weight:700;color:var(--text);flex:1;text-align:left">${nB}</span>
       </div>
       <div style="font-size:.78rem;color:${active?'var(--accent)':'var(--muted)'};letter-spacing:1px">${active?'⏱ Laufend':'Ausstehend'}</div>
+      ${refLine}
     </div>`;
   }
 }
@@ -5438,7 +5504,7 @@ function buildRemoteSpielplanHtml(){
     }
     round.matches.forEach(m=>{
       const nA=esc(m.aNames.join(' & ')),nB=esc(m.bNames.join(' & '));
-      html+=_buildRemoteMatchCard(nA,nB,m.fieldNum||'?',m.done,m.scoreA,m.scoreB,active);
+      html+=_buildRemoteMatchCard(nA,nB,m.fieldNum||'?',m.done,m.scoreA,m.scoreB,active,m.officialRef||null);
     });
     return html+'</div>';
   }
@@ -5462,7 +5528,7 @@ function buildRemoteSpielplanHtml(){
     }
     slot.matches.forEach(m=>{
       const nA=esc(tname(m.teamAId)),nB=esc(tname(m.teamBId));
-      html+=_buildRemoteMatchCard(nA,nB,m.fieldNum,m.done,m.scoreA,m.scoreB,firstUndoneRi===ri);
+      html+=_buildRemoteMatchCard(nA,nB,m.fieldNum,m.done,m.scoreA,m.scoreB,firstUndoneRi===ri,m.officialRef||null);
     });
   });
   return html+'</div>';
@@ -5563,7 +5629,8 @@ function openRemoteWindow(){
   remoteWin=window.open('','faustball_remote','width=1280,height=800,menubar=no,toolbar=no,location=no,status=no');
   if(!remoteWin){alert('Popup wurde blockiert. Bitte den Popup-Blocker für diese Seite deaktivieren.');return;}
   remoteWin.document.open();
-  const isLight=document.body.classList.contains('light');
+  const rbg=_bgThemes[remoteBgTheme]||_bgThemes.standard;
+  const remoteIsLight=remoteTheme==='light';
   remoteWin.document.write(`<!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -5571,7 +5638,7 @@ function openRemoteWindow(){
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0a0c10;--surface:#12151c;--surface2:#1a1f2b;--border:#252d3d;--accent:#f97316;--text:#e8eaf0;--muted:#6b7280;--win:#22c55e;--loss:#ef4444;--draw:#eab308;}
+:root{--bg:${rbg.bg};--surface:${rbg.surface};--surface2:${rbg.surface2};--border:${rbg.border};--accent:#f97316;--text:#e8eaf0;--muted:#6b7280;--win:#22c55e;--loss:#ef4444;--draw:#eab308;}
 body.light{--bg:#f0f2f7;--surface:#fff;--surface2:#e8ecf4;--border:#d0d7e6;--text:#1a202c;--muted:#8896aa;--win:#16a34a;--loss:#dc2626;--draw:#ca8a04;}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;transition:background .3s,color .3s}
 .rd-header{background:var(--surface);border-bottom:2px solid var(--accent);padding:12px 28px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10}
@@ -5583,7 +5650,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .rd-sess{color:var(--muted);font-size:.78rem;margin-left:12px}
 #rc{min-height:80vh}
 </style>
-</head><body class="${isLight?'light':''}">`);
+</head><body class="${remoteIsLight?'light':''}">`);
   remoteWin.document.write(`
 <div class="rd-header">
   <div class="rd-logo">📺 REMOTE</div>
@@ -5606,7 +5673,7 @@ function updateRemoteWindow(){
     const rv=remoteWin.document.getElementById('rd-view');
     const rd=remoteWin.document.getElementById('rd-dots');
     const rs=remoteWin.document.getElementById('rd-sess');
-    remoteWin.document.body.classList.toggle('light',document.body.classList.contains('light'));
+    _applyRemoteThemeToWin();
     if(rc)rc.innerHTML=buildRemoteViewHtml();
     const viewLabels={spielplan:'Spielplan',tabelle:'Tabelle',rangliste:'Rangliste'};
     if(rv)rv.textContent=viewLabels[remoteCurrentView]||'';
@@ -8466,6 +8533,10 @@ function stopUserSync(){
   try{const s=localStorage.getItem('fb_guiscale');if(s)setGuiScale(parseInt(s));else setGuiScale(5);}catch(e){setGuiScale(5);}
 
   try{const bg=localStorage.getItem('fb_bgtheme');if(bg)setBgTheme(bg);else setBgTheme('standard');}catch(e){setBgTheme('standard');}
+
+  try{const rt=localStorage.getItem('fb_remote_theme');if(rt)setRemoteTheme(rt);else setRemoteTheme('dark');}catch(e){setRemoteTheme('dark');}
+
+  try{const rb=localStorage.getItem('fb_remote_bgtheme');if(rb)setRemoteBgTheme(rb);else setRemoteBgTheme('standard');}catch(e){setRemoteBgTheme('standard');}
 
   try{const pl=localStorage.getItem('fb_printlayout');if(pl)setPrintLayout(pl);else setPrintLayout('standard');}catch(e){setPrintLayout('standard');}
 
