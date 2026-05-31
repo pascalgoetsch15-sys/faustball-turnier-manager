@@ -5019,7 +5019,7 @@ function buildRemoteSpielplanHtml(){
     <div style="font-family:'Bebas Neue',sans-serif;font-size:3.2rem;letter-spacing:5px;color:#f97316">${roundLabel}</div>
     <div style="font-size:.95rem;color:${statusColor};letter-spacing:3px;margin-top:6px;font-weight:600">${rDone?'✓ Abgeschlossen':'⏱ Laufend'}</div>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;padding:0 24px 32px">`;
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px;padding:0 24px 32px">`;
   slots.forEach(slot=>{
     if(slot.pauseTeamIds&&slot.pauseTeamIds.length){
       const names=slot.pauseTeamIds.map(id=>esc(tname(id))).join(', ');
@@ -5072,7 +5072,7 @@ function buildRemoteStandingsHtml(isRangliste){
         <th style="padding:0 12px;text-align:center">S</th>
         <th style="padding:0 12px;text-align:center">U</th>
         <th style="padding:0 12px;text-align:center">N</th>
-        <th style="padding:0 12px;text-align:center">Tore</th>
+        <th style="padding:0 12px;text-align:center">Punkte</th>
       </tr></thead><tbody>`;
   const podColors=['#f97316','#aaa','#a16207'];
   st.forEach((s,i)=>{
