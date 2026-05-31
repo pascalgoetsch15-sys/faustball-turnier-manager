@@ -2022,6 +2022,7 @@ let matchHistory={},refHistory={};
 let slotGlobalCounter=0,teamIdCounter=0,officialRefGlobalIdx=0;
 
 let teamPlayCount={};
+let cyclePlayCount={};
 
 let groups=[],groupPhase='group';
 
@@ -3589,7 +3590,7 @@ function addTeam(){
 
   teams.push(t);
 
-  matchHistory[t.id]={};refHistory[t.id]=0;teamPlayCount[t.id]=0;
+  matchHistory[t.id]={};refHistory[t.id]=0;teamPlayCount[t.id]=0;cyclePlayCount[t.id]=0;
 
   inp.value='';renderTeamList();renderAdvanceUI();saveSessionState();
 
@@ -3603,7 +3604,7 @@ function removeTeam(id){
 
   if(idx<0)return;
 
-  delete matchHistory[teams[idx].id];delete refHistory[teams[idx].id];delete teamPlayCount[teams[idx].id];
+  delete matchHistory[teams[idx].id];delete refHistory[teams[idx].id];delete teamPlayCount[teams[idx].id];delete cyclePlayCount[teams[idx].id];
 
   teams.splice(idx,1);renderTeamList();renderAdvanceUI();saveSessionState();
 
@@ -3846,7 +3847,7 @@ function clearLocalState(){
   numGroups=2;maxConsecutive=2;groupAdvanceCount=0;oddGroupMode='freilos';
   scoring={rr:{win:2,draw:1,loss:0},gz:{win:2,draw:1,loss:0,nearLoss:1},gs:{matchWin:3,matchDraw:1,matchLoss:0,matchNearLoss:1},numSets:3,winSets:2};byePts=0;
   rounds=[];currentRound=0;started=false;slotGlobalCounter=0;teamIdCounter=0;officialRefGlobalIdx=0;
-  matchHistory={};refHistory={};teamPlayCount={};
+  matchHistory={};refHistory={};teamPlayCount={};cyclePlayCount={};
   groups=[];groupPhase='group';groupMatches=[];placementRounds=[];
   tournamentFinished=false;endspurtActive=false;endspurtTarget=0;
   zufallMen=[];zufallWomen=[];zufallSameGender=true;
@@ -3861,7 +3862,7 @@ function resetTournament(){
 
   rounds=[];currentRound=0;started=false;slotGlobalCounter=0;officialRefGlobalIdx=0;
 
-  matchHistory={};refHistory={};teamPlayCount={};
+  matchHistory={};refHistory={};teamPlayCount={};cyclePlayCount={};
 
   groups=[];groupMatches=[];placementRounds=[];groupPhase='group';
 
@@ -3871,7 +3872,7 @@ function resetTournament(){
 
   [...zufallMen,...zufallWomen].forEach(p=>{zufallPartnerCount[p.id]={};zufallOpponentCount[p.id]={};zufallPlayCount[p.id]=0;});
 
-  teams.forEach(t=>{matchHistory[t.id]={};refHistory[t.id]=0;teamPlayCount[t.id]=0;});
+  teams.forEach(t=>{matchHistory[t.id]={};refHistory[t.id]=0;teamPlayCount[t.id]=0;cyclePlayCount[t.id]=0;});
 
   ['groupsDown','groupsUp','fieldsDown','fieldsUp','cdDown','cdUp','maxConsecDown','maxConsecUp'].forEach(id=>{
 
@@ -4689,14 +4690,15 @@ function rid(){return Math.random().toString(36).slice(2,10);}
  
 
 function generateRoundAndCompleteCycle(isFirst){
-  const preCycleMin=teams.length?(isFirst?0:Math.min(...teams.map(t=>teamPlayCount[t.id]||0))):0;
+  // Jeden Zyklus neu starten: cyclePlayCount auf 0 zurücksetzen damit alle Teams wieder mitspielen
+  if(schochFullCycle) teams.forEach(t=>{cyclePlayCount[t.id]=0;});
   generateRound(isFirst);
   if(!schochFullCycle||endspurtActive)return;
   let safety=Math.ceil(teams.length/Math.max(1,numFields))+4;
   while(safety-- >0){
-    const curMin=Math.min(...teams.map(t=>teamPlayCount[t.id]||0));
-    if(curMin>preCycleMin)break;
-    const behind=teams.filter(t=>(teamPlayCount[t.id]||0)===preCycleMin);
+    const curMin=Math.min(...teams.map(t=>cyclePlayCount[t.id]||0));
+    if(curMin>0)break; // Alle Teams haben diesen Zyklus gespielt
+    const behind=teams.filter(t=>!(cyclePlayCount[t.id]||0));
     if(behind.length===1&&schochOddMode==='pause')break;
     generateRound(false);
     if(rounds[rounds.length-1][0].matches.length===0)break;
@@ -4746,12 +4748,13 @@ function generateRound(isFirst){
   // if pool is odd, last-place "done" team plays one extra time
   let fullCyclePool=null;
   if(schochFullCycle&&!isFirst&&!endspurtActive){
-    const minPlays=teams.length?Math.min(...teams.map(t=>teamPlayCount[t.id]||0)):0;
-    const behind=ordered.filter(id=>(teamPlayCount[id]||0)===minPlays);
+    // cyclePlayCount zählt nur Spiele im aktuellen Zyklus (wird bei jedem Zyklus zurückgesetzt)
+    const minCyclePlays=teams.length?Math.min(...teams.map(t=>cyclePlayCount[t.id]||0)):0;
+    const behind=ordered.filter(id=>(cyclePlayCount[id]||0)===minCyclePlays);
     let pool=[...behind];
     if(pool.length%2===1&&schochOddMode==='bonus'){
       const st=getStandings();
-      const done=st.filter(s=>(teamPlayCount[s.id]||0)>minPlays);
+      const done=st.filter(s=>(cyclePlayCount[s.id]||0)>minCyclePlays);
       if(done.length>0)pool=[...pool,done[done.length-1].id];
     }
     fullCyclePool=pool;
@@ -4831,6 +4834,7 @@ function generateRound(isFirst){
       matchHistory[p.a][p.b]=currentRound;matchHistory[p.b][p.a]=currentRound;
 
       teamPlayCount[p.a]=(teamPlayCount[p.a]||0)+1;teamPlayCount[p.b]=(teamPlayCount[p.b]||0)+1;
+      cyclePlayCount[p.a]=(cyclePlayCount[p.a]||0)+1;cyclePlayCount[p.b]=(cyclePlayCount[p.b]||0)+1;
 
     });
 
@@ -4883,6 +4887,7 @@ function generateRound(isFirst){
       matchHistory[p.a][p.b]=currentRound;matchHistory[p.b][p.a]=currentRound;
 
       teamPlayCount[p.a]=(teamPlayCount[p.a]||0)+1;teamPlayCount[p.b]=(teamPlayCount[p.b]||0)+1;
+      cyclePlayCount[p.a]=(cyclePlayCount[p.a]||0)+1;cyclePlayCount[p.b]=(cyclePlayCount[p.b]||0)+1;
 
     });
 
@@ -8384,7 +8389,7 @@ function saveSessionState(){
 
     timerShow:document.getElementById('timerVisible')?.checked||false,
 
-    matchHistory,refHistory,teamPlayCount,
+    matchHistory,refHistory,teamPlayCount,cyclePlayCount,
 
     groups,groupPhase,groupMatches,placementRounds,
 
@@ -8426,7 +8431,7 @@ function loadSessionState(st){
 
   rounds=st.rounds||[];currentRound=st.currentRound||0;started=st.started||false;
 
-  matchHistory=st.matchHistory||{};refHistory=st.refHistory||{};teamPlayCount=st.teamPlayCount||{};
+  matchHistory=st.matchHistory||{};refHistory=st.refHistory||{};teamPlayCount=st.teamPlayCount||{};cyclePlayCount=st.cyclePlayCount||{};
 
   groups=st.groups||[];groupPhase=st.groupPhase||'group';
 
