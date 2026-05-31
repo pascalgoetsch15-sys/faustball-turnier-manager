@@ -5534,27 +5534,35 @@ function buildRemoteSpielplanHtml(){
   if(!rounds.length)return '<p style="color:#666;text-align:center;margin-top:80px;font-size:1.4rem">⏳ Kein Turnier aktiv</p>';
   const firstUndoneRi=rounds.findIndex(slots=>!slots.every(s=>s.done&&s.matches.every(m=>m.done)));
   const ri=firstUndoneRi>=0?firstUndoneRi:rounds.length-1;
-  const slots=rounds[ri];
-  const isEndspurt=slots.some(s=>s.isEndspurt);
-  const rDone=slots.every(s=>s.done&&s.matches.every(m=>m.done));
-  const roundLabel=(isEndspurt?'⚡ ENDSPURT — ':'')+'RUNDE '+(ri+1);
-  let html=`<div style="text-align:center;padding:28px 20px 16px">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:3.2rem;letter-spacing:5px;color:var(--accent)">${roundLabel}</div>
-    <div style="font-size:.95rem;color:${rDone?'var(--win)':'var(--accent)'};letter-spacing:3px;margin-top:6px;font-weight:600">${rDone?'✓ Abgeschlossen':'⏱ Laufend'}</div>
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px;padding:0 24px 32px">`;
-  const activeSlotIdx=slots.findIndex(s=>!s.done||s.matches.some(m=>!m.done));
-  const slotToShow=activeSlotIdx>=0?slots[activeSlotIdx]:slots[slots.length-1];
-  if(slotToShow.pauseTeamIds&&slotToShow.pauseTeamIds.length){
-    const names=slotToShow.pauseTeamIds.map(id=>esc(tname(id))).join(', ');
-    html+=`<div style="grid-column:1/-1;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 20px;color:var(--muted);text-align:center">⏸ Pause: ${names}</div>`;
-  }
-  slotToShow.matches.forEach(m=>{
-    const nA=esc(tname(m.teamAId)),nB=esc(tname(m.teamBId));
-    const _mref=refMode==='team'&&m.refTeamId?tname(m.refTeamId):m.officialRef;
-    html+=_buildRemoteMatchCard(nA,nB,m.fieldNum,m.done,m.scoreA,m.scoreB,!m.done,_mref||null);
+  // With schochFullCycle show all pre-generated cycle rounds; otherwise only the current one
+  const remoteVisibleRounds=schochFullCycle&&firstUndoneRi>=0?rounds.slice(firstUndoneRi):rounds.slice(ri,ri+1);
+  let html='';
+  remoteVisibleRounds.forEach((slots,idx)=>{
+    const absRi=ri+idx;
+    const isActive=idx===0;
+    const slotToShow=slots[0];
+    if(!slotToShow||slotToShow.matches.length===0)return;
+    const isEndspurt=slots.some(s=>s.isEndspurt);
+    const rDone=slots.every(s=>s.done&&s.matches.every(m=>m.done));
+    const roundLabel=(isEndspurt?'⚡ ENDSPURT — ':'')+'RUNDE '+(absRi+1);
+    const borderTop=idx>0?'border-top:2px solid var(--border);margin-top:8px;':'';
+    html+=`<div style="text-align:center;padding:${idx===0?'28px':'18px'} 20px 16px;${borderTop}">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:${idx===0?'3.2':'2.2'}rem;letter-spacing:5px;color:${isActive?'var(--accent)':'var(--muted)'}">${roundLabel}</div>
+      <div style="font-size:.95rem;color:${rDone?'var(--win)':isActive?'var(--accent)':'var(--muted)'};letter-spacing:3px;margin-top:6px;font-weight:600">${rDone?'✓ Abgeschlossen':isActive?'⏱ Laufend':'Ausstehend'}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px;padding:0 24px ${idx===remoteVisibleRounds.length-1?32:12}px">`;
+    if(slotToShow.pauseTeamIds&&slotToShow.pauseTeamIds.length){
+      const names=slotToShow.pauseTeamIds.map(id=>esc(tname(id))).join(', ');
+      html+=`<div style="grid-column:1/-1;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 20px;color:var(--muted);text-align:center">⏸ Pause: ${names}</div>`;
+    }
+    slotToShow.matches.forEach(m=>{
+      const nA=esc(tname(m.teamAId)),nB=esc(tname(m.teamBId));
+      const _mref=refMode==='team'&&m.refTeamId?tname(m.refTeamId):m.officialRef;
+      html+=_buildRemoteMatchCard(nA,nB,m.fieldNum,m.done,m.scoreA,m.scoreB,isActive&&!m.done,_mref||null);
+    });
+    html+='</div>';
   });
-  return html+'</div>';
+  return html;
 }
 
 function buildRemoteGroupStandingsHtml(){
