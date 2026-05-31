@@ -2521,19 +2521,7 @@ function printView(viewId){
 
 ============================================================ */
 
-function setMode(m){
-
-  if(started)return;
-
-  gameMode=m;
-
-  ['roundrobin','gruppenzeit','gruppensaetze','zufall'].forEach(k=>{
-
-    const el=document.getElementById('mode-'+k);
-
-    if(el)el.classList.toggle('sel',k===m);
-
-  });
+function applyModeCards(m){
 
   const isGroup=m==='gruppenzeit'||m==='gruppensaetze';
 
@@ -2556,6 +2544,24 @@ function setMode(m){
   document.getElementById('zufall-players-card').style.display=isZufall?'':'none';
 
   document.getElementById('scoringCard').style.display='';
+
+}
+
+function setMode(m){
+
+  if(started)return;
+
+  gameMode=m;
+
+  ['roundrobin','gruppenzeit','gruppensaetze','zufall'].forEach(k=>{
+
+    const el=document.getElementById('mode-'+k);
+
+    if(el)el.classList.toggle('sel',k===m);
+
+  });
+
+  applyModeCards(m);
 
   if(isZufall)renderZufallPlayers();
 
@@ -8087,6 +8093,7 @@ function refreshAllViews(){
 
   renderTeamList();updateStartCard();updateHeaderBadge();
 
+  applyModeCards(gameMode);
   renderCooldownUI();renderMaxConsecUI();renderFieldsUI();renderGroupsUI();renderAdvanceUI();renderScoringSettings();
 
   if(tournamentFinished)document.getElementById('tab-rangliste').style.display='';
