@@ -1308,7 +1308,33 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
     </div>
 
-    <div class="alert alert-info" style="margin-bottom:0;margin-top:12px">Alle Teams spielen in der Gruppe zuerst gegeneinander. Danach folgen Platzierungsspiele.</div>
+    <div class="group-stepper-row" style="margin-top:14px">
+
+      <div>
+
+        <div style="font-size:.8rem;color:var(--muted);margin-bottom:6px">Teams weiter (pro Gruppe)</div>
+
+        <div class="fields-stepper">
+
+          <button class="stepper-btn" id="advDown" onclick="changeAdvance(-1)">−</button>
+
+          <div class="fields-val" id="advVal">Alle</div>
+
+          <button class="stepper-btn" id="advUp" onclick="changeAdvance(1)">+</button>
+
+        </div>
+
+      </div>
+
+      <div style="align-self:flex-end">
+
+        <div class="fields-lbl" id="advDesc" style="color:var(--muted)">Alle Teams kommen weiter.</div>
+
+      </div>
+
+    </div>
+
+    <div class="alert alert-info" style="margin-bottom:0;margin-top:12px" id="groupInfoAlert">Alle Teams spielen in der Gruppe zuerst gegeneinander. Danach folgen Platzierungsspiele.</div>
 
   </div>
 
@@ -1904,7 +1930,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
       <div><div class="sr-label">Version</div><div class="sr-desc">Faustball Turnier</div></div>
 
-      <span class="version-badge">V2</span>
+      <span class="version-badge">Beta V2</span>
 
     </div>
 
@@ -1934,7 +1960,7 @@ let numFields=3,opponentCooldown=6;
 
 let gameMode='roundrobin';
 
-let numGroups=2,maxConsecutive=2;
+let numGroups=2,maxConsecutive=2,groupAdvanceCount=0;
 
 let byePts=0;
 
@@ -3213,6 +3239,8 @@ function renderGroupsUI(){
 
   document.getElementById('groupsUp').disabled=(numGroups>=8);
 
+  renderAdvanceUI();
+
 }
 
 function changeGroups(d){
@@ -3224,6 +3252,64 @@ function changeGroups(d){
   renderGroupsUI();
 
   renderGroupPreview();updateStartCard();
+
+}
+
+function renderAdvanceUI(){
+
+  const perGroup=teams.length>0?Math.floor(teams.length/numGroups):0;
+
+  const maxAdv=perGroup>1?perGroup-1:0;
+
+  const eff=groupAdvanceCount>0&&groupAdvanceCount<=maxAdv?groupAdvanceCount:0;
+
+  const valEl=document.getElementById('advVal');
+
+  const descEl=document.getElementById('advDesc');
+
+  const downEl=document.getElementById('advDown');
+
+  const upEl=document.getElementById('advUp');
+
+  const infoEl=document.getElementById('groupInfoAlert');
+
+  if(valEl)valEl.textContent=eff===0?'Alle':String(eff);
+
+  if(downEl)downEl.disabled=(eff<=0);
+
+  if(upEl)upEl.disabled=(maxAdv<=0||eff>=maxAdv);
+
+  if(descEl){
+
+    if(eff===0)descEl.textContent='Alle Teams kommen in die Kreuzspiele.';
+
+    else descEl.textContent=eff+' Team'+(eff>1?'s':'')+' pro Gruppe kommen weiter, der Rest spielt Platzierung.';
+
+  }
+
+  if(infoEl){
+
+    if(eff===0)infoEl.textContent='Alle Teams spielen in der Gruppe zuerst gegeneinander. Danach folgen Kreuzspiele.';
+
+    else infoEl.textContent='Top '+eff+' pro Gruppe → Kreuzspiele. Plätze '+(eff+1)+'-'+Math.max(eff+1,perGroup||eff+1)+' spielen direkt um ihre Platzierung.';
+
+  }
+
+}
+
+function changeAdvance(d){
+
+  if(started)return;
+
+  const perGroup=teams.length>0?Math.floor(teams.length/numGroups):0;
+
+  const maxAdv=perGroup>1?perGroup-1:0;
+
+  const eff=groupAdvanceCount>0&&groupAdvanceCount<=maxAdv?groupAdvanceCount:0;
+
+  groupAdvanceCount=Math.max(0,Math.min(maxAdv,eff+d));
+
+  renderAdvanceUI();
 
 }
 
@@ -3431,7 +3517,7 @@ function addTeam(){
 
   matchHistory[t.id]={};refHistory[t.id]=0;teamPlayCount[t.id]=0;
 
-  inp.value='';renderTeamList();saveSessionState();
+  inp.value='';renderTeamList();renderAdvanceUI();saveSessionState();
 
 }
 
@@ -3445,7 +3531,7 @@ function removeTeam(id){
 
   delete matchHistory[teams[idx].id];delete refHistory[teams[idx].id];delete teamPlayCount[teams[idx].id];
 
-  teams.splice(idx,1);renderTeamList();saveSessionState();
+  teams.splice(idx,1);renderTeamList();renderAdvanceUI();saveSessionState();
 
 }
 
@@ -3683,7 +3769,7 @@ function clearLocalState(){
   teams=[];referees=[];refMode='none';
   numFields=3;opponentCooldown=6;
   gameMode='roundrobin';
-  numGroups=2;maxConsecutive=2;
+  numGroups=2;maxConsecutive=2;groupAdvanceCount=0;
   scoring={rr:{win:2,draw:1,loss:0},gz:{win:2,draw:1,loss:0},gs:{matchWin:3,matchDraw:1,matchLoss:0,matchNearLoss:1},numSets:3,winSets:2};byePts=0;
   rounds=[];currentRound=0;started=false;slotGlobalCounter=0;teamIdCounter=0;officialRefGlobalIdx=0;
   matchHistory={};refHistory={};teamPlayCount={};
@@ -4081,24 +4167,59 @@ function generatePlacementRounds(){
 
   if(numGroups<=1){groupPhase='done';return;}
 
-  // Collect seeds interleaved by rank: A1,B1,C1,...,A2,B2,...
   const ranked=groups.map((_,i)=>getGroupStandings(i));
   const maxRank=Math.max(...groups.map(g=>g.length));
+
+  // How many teams per group advance to the main KO bracket (0 = all)
+  const perGroup=Math.floor(teams.length/numGroups);
+  const effAdvance=(groupAdvanceCount>0&&groupAdvanceCount<perGroup)?groupAdvanceCount:maxRank;
+
+  // Advancing seeds interleaved by rank: A1,B1,...,A2,B2,...
   const seeds=[];
-  for(let rank=0;rank<maxRank;rank++){
+  for(let rank=0;rank<effAdvance;rank++){
     for(let gi=0;gi<numGroups;gi++){
       if(ranked[gi][rank])seeds.push(ranked[gi][rank].id);
     }
   }
 
-  const n=seeds.length;
-  if(n<2){groupPhase='done';return;}
+  let seq=groupMatches.length+1;
 
-  // Find next power of 2
+  // Non-advancing teams: each rank plays the same rank from other groups (placement only)
+  for(let rank=effAdvance;rank<maxRank;rank++){
+    const rankTeams=[];
+    for(let gi=0;gi<numGroups;gi++){
+      if(ranked[gi][rank])rankTeams.push(ranked[gi][rank].id);
+    }
+    if(rankTeams.length<2)continue;
+    const posLow=effAdvance*numGroups+(rank-effAdvance)*numGroups+1;
+    const posHigh=posLow+rankTeams.length-1;
+    const posEmoji=posLow===3?'🥉 ':posLow===5?'🎖 ':'';
+    const posLabel=rankTeams.length===2?posEmoji+'Platz '+posLow+'/'+posHigh:'Platz '+posLow+'-'+posHigh;
+    const consKey='cross-rank'+(rank+1);
+    const half=Math.floor(rankTeams.length/2);
+    const plMatches=[];
+    for(let i=0;i<half;i++){
+      const m=createPlacementMatch(rankTeams[i],rankTeams[rankTeams.length-1-i],consKey+'-m'+i);
+      m.crossLabel=posLabel;
+      plMatches.push(m);
+    }
+    plMatches.forEach((m,fi)=>{m.seqNum=seq++;m.fieldNum=(fi%numFields)+1;});
+    placementRounds.push({
+      id:rid(),label:posLabel,rankBracket:consKey,
+      isKnockout:true,consolation:true,consKey,posLow,posHigh,
+      bracketSize:teams.length,byeTeams:[],matches:plMatches,done:false,placeholder:false,
+      generatedBy:'initial',consolationAdvanced:false,isCrossRank:true
+    });
+  }
+
+  // Main KO bracket for advancing seeds
+  const n=seeds.length;
+  if(n<2){if(!placementRounds.length)groupPhase='done';return;}
+
+  // Find next power of 2 for bracket size
   let B=1;while(B<n)B*=2;
   const byes=B-n;
 
-  // Top seeds get byes, lower seeds play round 0
   const byeTeams=seeds.slice(0,byes);
   const playing=seeds.slice(byes);
 
@@ -4113,18 +4234,16 @@ function generatePlacementRounds(){
     matches.push(m);
   }
 
-  let seq=groupMatches.length+1;
-  matches.forEach((m,fi)=>{m.seqNum=seq++;m.fieldNum=fi+1;});
+  matches.forEach((m,fi)=>{m.seqNum=seq++;m.fieldNum=(fi%numFields)+1;});
 
   const r0={
     id:rid(),label:label+byeNote,rankBracket:'r0',
     isKnockout:true,bracketRound:0,bracketSize:B,
     byeTeams,matches,done:matches.length===0,placeholder:false,
-    isSemi:isSemi0,isFinal:B===2
+    isSemi:isSemi0,isFinal:B===2,generatedBy:null
   };
   placementRounds.push(r0);
 
-  // If all byes (no real matches in round 0), advance immediately
   if(matches.length===0)tryAdvanceKnockout();
 }
 
@@ -4173,7 +4292,7 @@ function generateConsolationGroup(teams,posLow,posHigh,bracketSize,generatedBy){
     matches.push(m);
   }
   let seq=groupMatches.length+placementRounds.flatMap(r=>r.matches).length+1;
-  matches.forEach((m,fi)=>{m.seqNum=seq++;m.fieldNum=fi+1;});
+  matches.forEach((m,fi)=>{m.seqNum=seq++;m.fieldNum=(fi%numFields)+1;});
   placementRounds.push({
     id:rid(),label:posLabel,rankBracket:consKey,
     isKnockout:true,consolation:true,consKey,posLow,posHigh,
@@ -4231,7 +4350,7 @@ function tryAdvanceKnockout(){
   }
 
   let seq=groupMatches.length+placementRounds.flatMap(r=>r.matches).length+1;
-  nextMatches.forEach((m,fi)=>{m.seqNum=seq++;m.fieldNum=fi+1;});
+  nextMatches.forEach((m,fi)=>{m.seqNum=seq++;m.fieldNum=(fi%numFields)+1;});
 
   placementRounds.push({
     id:rid(),label:nextLabel,rankBracket:isFinalNext?'final':'r'+(lastDoneIdx+1),
@@ -5288,6 +5407,50 @@ function nextRoundAction(){
 
 ============================================================ */
 
+function renderPlacementSlotOverview(){
+  if(!placementRounds.length)return '';
+  const allPR=placementRounds.filter(pr=>!pr.placeholder&&pr.matches.length>0);
+  if(!allPR.length)return '';
+
+  // Collect all placement matches ordered by seqNum
+  const allM=[];
+  allPR.forEach(pr=>allM.push(...pr.matches));
+  allM.sort((a,b)=>(a.seqNum||0)-(b.seqNum||0));
+
+  // Group into numFields-sized batches
+  const slots=[];
+  for(let i=0;i<allM.length;i+=numFields)slots.push(allM.slice(i,i+numFields));
+  if(!slots.length)return '';
+
+  const firstIncomplete=slots.findIndex(s=>!s.every(m=>m.done));
+
+  let html='<div class="slot-overview"><div class="slot-overview-head">📋 Zeitplan-Übersicht (Kreuzspiele)</div>';
+  html+='<div style="overflow-x:auto"><table class="slot-table"><thead><tr><th>#</th>';
+  for(let f=1;f<=numFields;f++)html+=`<th>Feld ${f}</th>`;
+  html+='</tr></thead><tbody>';
+
+  slots.forEach((slot,si)=>{
+    const allDone=slot.every(m=>m.done);
+    const rowClass=allDone?'st-done':(si===firstIncomplete?'st-active':'');
+    html+=`<tr class="${rowClass}"><td class="st-nr">${si+1}${allDone?' <span style="color:var(--win)">✓</span>':''}</td>`;
+    for(let f=0;f<numFields;f++){
+      const m=slot[f];
+      if(m){
+        const pr=allPR.find(pr=>pr.matches.some(x=>x.id===m.id));
+        const rl=pr?pr.label:'';
+        const nA=esc(tname(m.teamAId)),nB=esc(tname(m.teamBId));
+        html+=`<td style="font-size:.77rem">${m.done?'<span style="opacity:.45">':''}${nA} <span style="color:var(--muted)">vs</span> ${nB}${m.done?'</span>':''}<br><span style="font-size:.65rem;color:var(--muted)">${esc(rl)}</span></td>`;
+      }else{
+        html+=`<td style="color:var(--border)">—</td>`;
+      }
+    }
+    html+='</tr>';
+  });
+
+  html+='</tbody></table></div></div>';
+  return html;
+}
+
 function renderSlotOverview(){
 
   if(!groupMatches.length)return '';
@@ -5470,6 +5633,12 @@ function renderGroupMatches(){
 
   if(userRole==='user'){html+='</div>';el.innerHTML=html;return;}
 
+  // Determine which time slot is currently active so only those matches show inputs
+  const _gSlotMap={};
+  groupMatches.forEach(m=>{const si=m._slotIdx??0;if(!_gSlotMap[si])_gSlotMap[si]=[];_gSlotMap[si].push(m);});
+  const _gFirstActiveSlot=Object.keys(_gSlotMap).sort((a,b)=>+a-+b).find(si=>!_gSlotMap[si].every(m=>m.done));
+  const _gActiveSlotNum=_gFirstActiveSlot!==undefined?+_gFirstActiveSlot:null;
+
   groups.forEach((gTeams,gi)=>{
 
     const c=GC[gi%GC.length];
@@ -5492,7 +5661,10 @@ function renderGroupMatches(){
 
     html+=renderStandingsTable(gs,isZeit,2);
 
-    html+='<div class="fields-grid">'+gm.map(m=>groupMatchCard(m,groupPhase==='group')).join('')+'</div></div>';
+    html+='<div class="fields-grid">'+gm.map(m=>{
+      const isActive=groupPhase==='group'&&_gActiveSlotNum!==null&&(m._slotIdx??0)===_gActiveSlotNum;
+      return groupMatchCard(m,isActive);
+    }).join('')+'</div></div>';
 
   });
 
@@ -5510,6 +5682,7 @@ function renderGroupMatches(){
 
   if(placementRounds.length>0){
     html+=`<div class="group-stage-section"><div class="group-stage-header">Kreuzspiele <span class="phase-badge phase-place">K.O.-Runde</span></div>`;
+    html+=renderPlacementSlotOverview();
 
     placementRounds.forEach(pr=>{
       if(pr.placeholder)return;
@@ -5517,9 +5690,11 @@ function renderGroupMatches(){
       const roundDone=pr.matches.length>0&&pr.matches.every(m=>m.done);
       if(roundDone&&!pr.done)pr.done=true;
 
-      const prSlots=!roundDone?computeMatchSlots(pr.matches):[];
-      const firstActiveSlot=prSlots.findIndex(slot=>!slot.every(m=>m.done));
-      const isActive=firstActiveSlot>=0;
+      // Split matches into numFields-batches; only first undone batch is active
+      const prBatches=[];
+      for(let i=0;i<pr.matches.length;i+=numFields)prBatches.push(pr.matches.slice(i,i+numFields));
+      const firstActiveBatch=!roundDone?prBatches.findIndex(b=>!b.every(m=>m.done)):-1;
+      const isActive=firstActiveBatch>=0;
 
       html+=`<div class="placement-section" style="border-color:${roundDone?'rgba(34,197,94,.3)':isActive?'rgba(249,115,22,.3)':'var(--border)'}">`;
       html+=`<div class="placement-title" style="color:${roundDone?'var(--win)':isActive?'var(--accent)':'var(--text)'}">${pr.label} <span class="badge ${roundDone?'badge-done':'badge-pending'}">${pr.matches.filter(m=>m.done).length}/${pr.matches.length} fertig</span></div>`;
@@ -5531,9 +5706,9 @@ function renderGroupMatches(){
         html+='<div class="alert alert-cooldown" style="margin-bottom:12px;font-size:.8rem">🏆 Kreuzspiele: Sieger kommen ins Finale – Verlierer spielen um Platz 3.</div>';
       }
 
-      html+='<div class="fields-grid">'+pr.matches.map(m=>{
-        const si=prSlots.findIndex(s=>s.some(x=>x.id===m.id));
-        return groupMatchCard(m,si>=0&&si===firstActiveSlot);
+      html+='<div class="fields-grid">'+pr.matches.map((m,mi)=>{
+        const batchIdx=Math.floor(mi/numFields);
+        return groupMatchCard(m,batchIdx===firstActiveBatch);
       }).join('')+'</div></div>';
     });
 
@@ -7797,7 +7972,7 @@ function saveSessionState(){
 
     teams,referees,refMode,numFields,opponentCooldown,
 
-    gameMode,numGroups,maxConsecutive,scoring,byePts,schochFullCycle,schochOddMode,
+    gameMode,numGroups,maxConsecutive,groupAdvanceCount,scoring,byePts,schochFullCycle,schochOddMode,
 
     rounds,currentRound,started,
 
@@ -7831,7 +8006,7 @@ function loadSessionState(st){
 
   numFields=st.numFields||3;opponentCooldown=st.opponentCooldown||6;
 
-  gameMode=st.gameMode||'roundrobin';numGroups=st.numGroups||2;maxConsecutive=st.maxConsecutive||2;
+  gameMode=st.gameMode||'roundrobin';numGroups=st.numGroups||2;maxConsecutive=st.maxConsecutive||2;groupAdvanceCount=st.groupAdvanceCount||0;
   schochFullCycle=st.schochFullCycle||false;
   schochOddMode=st.schochOddMode||'bonus';
   const sfc=document.getElementById('schochFullCycleToggle');if(sfc)sfc.checked=schochFullCycle;
@@ -7912,7 +8087,7 @@ function refreshAllViews(){
 
   renderTeamList();updateStartCard();updateHeaderBadge();
 
-  renderCooldownUI();renderMaxConsecUI();renderFieldsUI();renderGroupsUI();renderScoringSettings();
+  renderCooldownUI();renderMaxConsecUI();renderFieldsUI();renderGroupsUI();renderAdvanceUI();renderScoringSettings();
 
   if(tournamentFinished)document.getElementById('tab-rangliste').style.display='';
 
