@@ -5379,7 +5379,8 @@ function _buildRemoteGroupMatchCard(m,active){
   const isSaetze=gameMode==='gruppensaetze';
   const nA=esc(tname(m.teamAId)),nB=esc(tname(m.teamBId));
   const fieldNum=m.fieldNum||'?';
-  const refLine=m.officialRef?`<div style="font-size:.78rem;color:#818cf8;letter-spacing:1px;margin-top:5px">🟣 ${esc(m.officialRef)}</div>`:'';
+  const _ref=refMode==='team'&&m.refTeamId?tname(m.refTeamId):m.officialRef;
+  const refLine=_ref?`<div style="font-size:.78rem;color:#818cf8;letter-spacing:1px;margin-top:5px">🟣 ${esc(_ref)}</div>`:'';
   if(m.done){
     if(isSaetze){
       let aw=0,bw=0;(m.sets||[]).forEach(([sa,sb])=>{if(sa>sb)aw++;else if(sb>sa)bw++;});
@@ -5531,7 +5532,8 @@ function buildRemoteSpielplanHtml(){
   }
   slotToShow.matches.forEach(m=>{
     const nA=esc(tname(m.teamAId)),nB=esc(tname(m.teamBId));
-    html+=_buildRemoteMatchCard(nA,nB,m.fieldNum,m.done,m.scoreA,m.scoreB,firstUndoneRi===ri,m.officialRef||null);
+    const _mref=refMode==='team'&&m.refTeamId?tname(m.refTeamId):m.officialRef;
+    html+=_buildRemoteMatchCard(nA,nB,m.fieldNum,m.done,m.scoreA,m.scoreB,firstUndoneRi===ri,_mref||null);
   });
   return html+'</div>';
 }
