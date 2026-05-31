@@ -5314,6 +5314,49 @@ function restartRemoteRotation(){
   },remoteRotateSec*1000);
 }
 
+function _buildRemoteGroupMatchCard(m,active){
+  const isSaetze=gameMode==='gruppensaetze';
+  const nA=esc(tname(m.teamAId)),nB=esc(tname(m.teamBId));
+  const fieldNum=m.fieldNum||'?';
+  if(m.done){
+    if(isSaetze){
+      let aw=0,bw=0;(m.sets||[]).forEach(([sa,sb])=>{if(sa>sb)aw++;else if(sb>sa)bw++;});
+      const aW=aw>bw,draw=aw===bw;
+      return `<div style="background:var(--surface2);border:2px solid var(--win);border-radius:14px;padding:22px 18px;text-align:center">
+        <div style="font-size:.95rem;letter-spacing:3px;color:var(--accent);margin-bottom:12px;font-family:'Bebas Neue',sans-serif">FELD ${fieldNum}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+          <span style="font-size:1.5rem;font-weight:700;color:${aW?'var(--win)':draw?'var(--text)':'var(--muted)'};flex:1;text-align:right">${nA}</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:3rem;color:var(--text);padding:0 10px;line-height:1">${aw}&thinsp;:&thinsp;${bw}</span>
+          <span style="font-size:1.5rem;font-weight:700;color:${!aW&&!draw?'var(--win)':draw?'var(--text)':'var(--muted)'};flex:1;text-align:left">${nB}</span>
+        </div>
+        <div style="font-size:.75rem;color:var(--muted);margin-bottom:6px">${(m.sets||[]).map(([sa,sb],i)=>`S${i+1}: ${sa}:${sb}`).join(' · ')}</div>
+        <div style="font-size:.78rem;color:var(--win);letter-spacing:1px">✓ Fertig</div>
+      </div>`;
+    }else{
+      const aW=m.scoreA>m.scoreB,draw=m.scoreA===m.scoreB;
+      return `<div style="background:var(--surface2);border:2px solid var(--win);border-radius:14px;padding:22px 18px;text-align:center">
+        <div style="font-size:.95rem;letter-spacing:3px;color:var(--accent);margin-bottom:12px;font-family:'Bebas Neue',sans-serif">FELD ${fieldNum}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+          <span style="font-size:1.5rem;font-weight:700;color:${aW?'var(--win)':draw?'var(--text)':'var(--muted)'};flex:1;text-align:right">${nA}</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:3rem;color:var(--text);padding:0 10px;line-height:1">${m.scoreA}&thinsp;:&thinsp;${m.scoreB}</span>
+          <span style="font-size:1.5rem;font-weight:700;color:${!aW&&!draw?'var(--win)':draw?'var(--text)':'var(--muted)'};flex:1;text-align:left">${nB}</span>
+        </div>
+        <div style="font-size:.78rem;color:var(--win);letter-spacing:1px">✓ Fertig</div>
+      </div>`;
+    }
+  }else{
+    return `<div style="background:var(--surface2);border:2px solid ${active?'var(--accent)':'var(--border)'};border-radius:14px;padding:22px 18px;text-align:center">
+      <div style="font-size:.95rem;letter-spacing:3px;color:var(--accent);margin-bottom:12px;font-family:'Bebas Neue',sans-serif">FELD ${fieldNum}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+        <span style="font-size:1.5rem;font-weight:700;color:var(--text);flex:1;text-align:right">${nA}</span>
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:2.2rem;color:var(--muted);padding:0 10px;line-height:1">VS</span>
+        <span style="font-size:1.5rem;font-weight:700;color:var(--text);flex:1;text-align:left">${nB}</span>
+      </div>
+      <div style="font-size:.78rem;color:${active?'var(--accent)':'var(--muted)'};letter-spacing:1px">${active?'⏱ Laufend':'Ausstehend'}</div>
+    </div>`;
+  }
+}
+
 function _buildRemoteMatchCard(nA,nB,fieldNum,done,scoreA,scoreB,active){
   if(done){
     const aW=scoreA>scoreB,draw=scoreA===scoreB;
@@ -5341,6 +5384,39 @@ function _buildRemoteMatchCard(nA,nB,fieldNum,done,scoreA,scoreB,active){
 
 function buildRemoteSpielplanHtml(){
   if(!started)return '<p style="color:#666;text-align:center;margin-top:80px;font-size:1.4rem">⏳ Kein Turnier aktiv</p>';
+
+  if(gameMode==='gruppenzeit'||gameMode==='gruppensaetze'){
+    // Placement phase: show current active placement round
+    if(groupPhase==='placement'&&placementRounds.length){
+      const activePR=placementRounds.find(pr=>!pr.placeholder&&pr.matches.length>0&&!pr.done);
+      const showPR=activePR||placementRounds.filter(pr=>!pr.placeholder&&pr.matches.length>0).slice(-1)[0];
+      if(!showPR)return '<p style="color:#666;text-align:center;margin-top:80px;font-size:1.4rem">⏳ Keine Spiele</p>';
+      const prDone=showPR.matches.every(m=>m.done);
+      let html=`<div style="text-align:center;padding:28px 20px 16px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:3.2rem;letter-spacing:5px;color:var(--accent)">${esc(showPR.label).toUpperCase()}</div>
+        <div style="font-size:.95rem;color:${prDone?'var(--win)':'var(--accent)'};letter-spacing:3px;margin-top:6px;font-weight:600">${prDone?'✓ Abgeschlossen':'⏱ Laufend'}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px;padding:0 24px 32px">`;
+      showPR.matches.forEach(m=>{html+=_buildRemoteGroupMatchCard(m,!m.done&&!prDone);});
+      return html+'</div>';
+    }
+    // Group phase: show current active slot
+    const slotMap={};
+    groupMatches.forEach(m=>{const si=m._slotIdx??0;if(!slotMap[si])slotMap[si]=[];slotMap[si].push(m);});
+    const slotKeys=Object.keys(slotMap).map(Number).sort((a,b)=>a-b);
+    if(!slotKeys.length)return '<p style="color:#666;text-align:center;margin-top:80px;font-size:1.4rem">⏳ Keine Spiele geplant</p>';
+    const activeKey=slotKeys.find(si=>!slotMap[si].every(m=>m.done));
+    const showKey=activeKey!==undefined?activeKey:slotKeys[slotKeys.length-1];
+    const slotMatches=slotMap[showKey];
+    const slotDone=slotMatches.every(m=>m.done);
+    let html=`<div style="text-align:center;padding:28px 20px 16px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:3.2rem;letter-spacing:5px;color:var(--accent)">RUNDE ${showKey+1}</div>
+      <div style="font-size:.95rem;color:${slotDone?'var(--win)':'var(--accent)'};letter-spacing:3px;margin-top:6px;font-weight:600">${slotDone?'✓ Abgeschlossen':'⏱ Laufend'}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px;padding:0 24px 32px">`;
+    slotMatches.forEach(m=>{html+=_buildRemoteGroupMatchCard(m,!m.done&&!slotDone);});
+    return html+'</div>';
+  }
 
   if(gameMode==='zufall'){
     if(!zufallRounds.length)return '<p style="color:#666;text-align:center;margin-top:80px;font-size:1.4rem">⏳ Keine Runden generiert</p>';
@@ -5392,8 +5468,48 @@ function buildRemoteSpielplanHtml(){
   return html+'</div>';
 }
 
+function buildRemoteGroupStandingsHtml(){
+  const isZeit=gameMode==='gruppenzeit';
+  const cols=Math.min(groups.length,3);
+  let html=`<div style="text-align:center;padding:28px 20px 20px">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;letter-spacing:5px;color:#f97316">GRUPPEN-TABELLE</div>
+  </div>
+  <div style="padding:0 24px 32px;display:grid;grid-template-columns:repeat(${cols},1fr);gap:28px">`;
+  groups.forEach((_,gi)=>{
+    const c=GC[gi%GC.length];
+    const gs=getGroupStandings(gi);
+    const effAdv=groupAdvanceCount>0&&groupAdvanceCount<gs.length?groupAdvanceCount:0;
+    html+=`<div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:3px;color:${c};margin-bottom:14px;text-align:center">GRUPPE ${'ABCDEFGH'[gi]}</div>
+      <table style="width:100%;border-collapse:separate;border-spacing:0 6px">
+        <thead><tr style="font-size:.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase">
+          <th style="padding:0 8px;text-align:center;width:36px">#</th>
+          <th style="padding:0 8px;text-align:left">Team</th>
+          <th style="padding:0 8px;text-align:center">Sp</th>
+          <th style="padding:0 8px;text-align:center">Pkte</th>
+          <th style="padding:0 8px;text-align:center">${isZeit?'Diff':'Sätze'}</th>
+        </tr></thead><tbody>`;
+    gs.forEach((s,i)=>{
+      const adv=effAdv>0&&i<effAdv;
+      const dv=isZeit?fmtDiff(s.sf,s.sa):(s.satsPts+'-'+s.satsAgainst);
+      const dc=isZeit?diffClr(s.sf,s.sa):'var(--muted)';
+      html+=`<tr style="background:${adv?'rgba(34,197,94,.1)':'var(--surface2)'}">
+        <td style="padding:10px 8px;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:${adv?'var(--win)':'var(--muted)'};text-align:center;border-radius:8px 0 0 8px">${i+1}</td>
+        <td style="padding:10px 8px;font-size:1.05rem;font-weight:700;color:var(--text)">${esc(s.name)}</td>
+        <td style="padding:10px 8px;text-align:center;color:var(--muted)">${s.played}</td>
+        <td style="padding:10px 8px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--accent)">${s.pts}</td>
+        <td style="padding:10px 8px;text-align:center;color:${dc};border-radius:0 8px 8px 0">${dv}</td>
+      </tr>`;
+    });
+    html+='</tbody></table></div>';
+  });
+  return html+'</div>';
+}
+
 function buildRemoteStandingsHtml(isRangliste){
-  const st=getStandings();
+  const isGroupMode=gameMode==='gruppenzeit'||gameMode==='gruppensaetze';
+  if(isGroupMode&&!isRangliste)return buildRemoteGroupStandingsHtml();
+  const st=isGroupMode?getFinalRangliste():getStandings();
   if(!st.length)return '<p style="color:#666;text-align:center;margin-top:80px;font-size:1.4rem">Keine Daten</p>';
   const title=isRangliste?'🏆 ENDRANGLISTE':'TABELLE';
   const titleColor=isRangliste?'#eab308':'#f97316';
@@ -5905,7 +6021,7 @@ function renderStandingsTable(gs,isZeit,highlightTop){
 
   let html=`<table class="standings-table" style="margin-bottom:14px"><thead><tr>
 
-    <th>#</th><th class="td-name">Team</th><th>Sp</th><th>S</th><th>N</th><th>Pkte</th>
+    <th>#</th><th class="td-name">Team</th><th>Sp</th><th>S</th><th>U</th><th>N</th><th>Pkte</th>
 
     ${isZeit?'<th>Diff</th>':'<th>Sätze</th>'}
 
@@ -5926,6 +6042,8 @@ function renderStandingsTable(gs,isZeit,highlightTop){
       <td class="td-name">${esc(s.name)}</td>
 
       <td>${s.played}</td><td style="color:var(--win)">${s.won}</td>
+
+      <td style="color:var(--draw)">${s.drawn}</td>
 
       <td style="color:var(--loss)">${s.lost}</td>
 
