@@ -2327,6 +2327,8 @@ function setTheme(t){
 
   try{localStorage.setItem('fb_theme',t);}catch(e){}
 
+  updateRemoteWindow();
+
 }
 
 const _bgThemes={
@@ -5017,38 +5019,38 @@ function buildRemoteSpielplanHtml(){
   const roundLabel=(isEndspurt?'⚡ ENDSPURT — ':'')+'RUNDE '+(ri+1);
   const statusColor=rDone?'#22c55e':'#f97316';
   let html=`<div style="text-align:center;padding:28px 20px 16px">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:3.2rem;letter-spacing:5px;color:#f97316">${roundLabel}</div>
-    <div style="font-size:.95rem;color:${statusColor};letter-spacing:3px;margin-top:6px;font-weight:600">${rDone?'✓ Abgeschlossen':'⏱ Laufend'}</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:3.2rem;letter-spacing:5px;color:var(--accent)">${roundLabel}</div>
+    <div style="font-size:.95rem;color:${rDone?'var(--win)':'var(--accent)'};letter-spacing:3px;margin-top:6px;font-weight:600">${rDone?'✓ Abgeschlossen':'⏱ Laufend'}</div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px;padding:0 24px 32px">`;
   slots.forEach(slot=>{
     if(slot.pauseTeamIds&&slot.pauseTeamIds.length){
       const names=slot.pauseTeamIds.map(id=>esc(tname(id))).join(', ');
-      html+=`<div style="grid-column:1/-1;background:#1a1f2e;border:1px solid #2a2f40;border-radius:12px;padding:14px 20px;color:#555;text-align:center">⏸ Pause: ${names}</div>`;
+      html+=`<div style="grid-column:1/-1;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 20px;color:var(--muted);text-align:center">⏸ Pause: ${names}</div>`;
     }
     slot.matches.forEach(m=>{
       const nA=esc(tname(m.teamAId)),nB=esc(tname(m.teamBId));
       if(m.done){
         const aW=m.scoreA>m.scoreB,draw=m.scoreA===m.scoreB;
-        html+=`<div style="background:#1a1f2e;border:2px solid #22c55e;border-radius:14px;padding:22px 18px;text-align:center">
-          <div style="font-size:.95rem;letter-spacing:3px;color:#f97316;margin-bottom:12px;font-family:'Bebas Neue',sans-serif">FELD ${m.fieldNum}</div>
+        html+=`<div style="background:var(--surface2);border:2px solid var(--win);border-radius:14px;padding:22px 18px;text-align:center">
+          <div style="font-size:.95rem;letter-spacing:3px;color:var(--accent);margin-bottom:12px;font-family:'Bebas Neue',sans-serif">FELD ${m.fieldNum}</div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
-            <span style="font-size:1.5rem;font-weight:700;color:${aW?'#22c55e':draw?'#fff':'#444'};flex:1;text-align:right">${nA}</span>
-            <span style="font-family:'Bebas Neue',sans-serif;font-size:3rem;color:#fff;padding:0 10px;line-height:1">${m.scoreA}&thinsp;:&thinsp;${m.scoreB}</span>
-            <span style="font-size:1.5rem;font-weight:700;color:${!aW&&!draw?'#22c55e':draw?'#fff':'#444'};flex:1;text-align:left">${nB}</span>
+            <span style="font-size:1.5rem;font-weight:700;color:${aW?'var(--win)':draw?'var(--text)':'var(--muted)'};flex:1;text-align:right">${nA}</span>
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:3rem;color:var(--text);padding:0 10px;line-height:1">${m.scoreA}&thinsp;:&thinsp;${m.scoreB}</span>
+            <span style="font-size:1.5rem;font-weight:700;color:${!aW&&!draw?'var(--win)':draw?'var(--text)':'var(--muted)'};flex:1;text-align:left">${nB}</span>
           </div>
-          <div style="font-size:.78rem;color:#22c55e;letter-spacing:1px">✓ Fertig</div>
+          <div style="font-size:.78rem;color:var(--win);letter-spacing:1px">✓ Fertig</div>
         </div>`;
       }else{
         const active=firstUndoneRi===ri;
-        html+=`<div style="background:#1a1f2e;border:2px solid ${active?'#f97316':'#2a2f40'};border-radius:14px;padding:22px 18px;text-align:center">
-          <div style="font-size:.95rem;letter-spacing:3px;color:#f97316;margin-bottom:12px;font-family:'Bebas Neue',sans-serif">FELD ${m.fieldNum}</div>
+        html+=`<div style="background:var(--surface2);border:2px solid ${active?'var(--accent)':'var(--border)'};border-radius:14px;padding:22px 18px;text-align:center">
+          <div style="font-size:.95rem;letter-spacing:3px;color:var(--accent);margin-bottom:12px;font-family:'Bebas Neue',sans-serif">FELD ${m.fieldNum}</div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
-            <span style="font-size:1.5rem;font-weight:700;flex:1;text-align:right">${nA}</span>
-            <span style="font-family:'Bebas Neue',sans-serif;font-size:2.2rem;color:#444;padding:0 10px;line-height:1">VS</span>
-            <span style="font-size:1.5rem;font-weight:700;flex:1;text-align:left">${nB}</span>
+            <span style="font-size:1.5rem;font-weight:700;color:var(--text);flex:1;text-align:right">${nA}</span>
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:2.2rem;color:var(--muted);padding:0 10px;line-height:1">VS</span>
+            <span style="font-size:1.5rem;font-weight:700;color:var(--text);flex:1;text-align:left">${nB}</span>
           </div>
-          <div style="font-size:.78rem;color:${active?'#f97316':'#444'};letter-spacing:1px">${active?'⏱ Laufend':'Ausstehend'}</div>
+          <div style="font-size:.78rem;color:${active?'var(--accent)':'var(--muted)'};letter-spacing:1px">${active?'⏱ Laufend':'Ausstehend'}</div>
         </div>`;
       }
     });
@@ -5067,7 +5069,7 @@ function buildRemoteStandingsHtml(isRangliste){
   </div>
   <div style="padding:0 24px 32px">
     <table style="width:100%;border-collapse:separate;border-spacing:0 8px">
-      <thead><tr style="font-size:.7rem;letter-spacing:2px;color:#444;text-transform:uppercase">
+      <thead><tr style="font-size:.7rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase">
         <th style="padding:0 12px;text-align:center;width:52px">#</th>
         <th style="padding:0 12px;text-align:left">Team</th>
         ${rc.spi?'<th style="padding:0 12px;text-align:center">Sp</th>':''}
@@ -5077,21 +5079,21 @@ function buildRemoteStandingsHtml(isRangliste){
         ${rc.diff?'<th style="padding:0 12px;text-align:center">Diff</th>':''}
         ${rc.pts?'<th style="padding:0 12px;text-align:center">Pkte</th>':''}
       </tr></thead><tbody>`;
-  const podColors=['#f97316','#aaa','#a16207'];
+  const podColors=['var(--accent)','#aaa','#a16207'];
   st.forEach((s,i)=>{
-    const rankColor=i<3?podColors[i]:'#ccc';
-    const bg=i===0?'rgba(249,115,22,.1)':i<3?'rgba(255,255,255,.04)':'#1a1f2e';
+    const rankColor=i<3?podColors[i]:'var(--muted)';
+    const bg=i===0?'rgba(249,115,22,.12)':'var(--surface2)';
     const dv=fmtDiff(s.sf||0,s.sa||0);
     const dc=diffClr(s.sf||0,s.sa||0);
     html+=`<tr style="background:${bg}">
       <td style="padding:14px 12px;font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:${rankColor};border-radius:10px 0 0 10px;text-align:center">${i+1}</td>
-      <td style="padding:14px 12px;font-size:1.25rem;font-weight:700">${esc(s.name)}</td>
-      ${rc.spi?`<td style="padding:14px 12px;text-align:center;color:#888">${s.played}</td>`:''}
-      ${rc.s?`<td style="padding:14px 12px;text-align:center;color:#22c55e;font-weight:700">${s.won}</td>`:''}
-      ${rc.u?`<td style="padding:14px 12px;text-align:center;color:#eab308;font-weight:700">${s.drawn}</td>`:''}
-      ${rc.n?`<td style="padding:14px 12px;text-align:center;color:#ef4444;font-weight:700">${s.lost}</td>`:''}
+      <td style="padding:14px 12px;font-size:1.25rem;font-weight:700;color:var(--text)">${esc(s.name)}</td>
+      ${rc.spi?`<td style="padding:14px 12px;text-align:center;color:var(--muted)">${s.played}</td>`:''}
+      ${rc.s?`<td style="padding:14px 12px;text-align:center;color:var(--win);font-weight:700">${s.won}</td>`:''}
+      ${rc.u?`<td style="padding:14px 12px;text-align:center;color:var(--draw);font-weight:700">${s.drawn}</td>`:''}
+      ${rc.n?`<td style="padding:14px 12px;text-align:center;color:var(--loss);font-weight:700">${s.lost}</td>`:''}
       ${rc.diff?`<td style="padding:14px 12px;text-align:center;color:${dc};font-weight:700">${dv}</td>`:''}
-      ${rc.pts?`<td style="padding:14px 12px;font-size:1.4rem;font-family:'Bebas Neue',sans-serif;color:#f97316;text-align:center;border-radius:${!rc.diff&&!rc.n&&!rc.u&&!rc.s&&!rc.spi?'10px':'0 10px 10px 0'}">${s.pts}</td>`:''}
+      ${rc.pts?`<td style="padding:14px 12px;font-size:1.4rem;font-family:'Bebas Neue',sans-serif;color:var(--accent);text-align:center;border-radius:0 10px 10px 0">${s.pts}</td>`:''}
     </tr>`;
   });
   return html+'</tbody></table></div>';
@@ -5111,6 +5113,7 @@ function openRemoteWindow(){
   remoteWin=window.open('','faustball_remote','width=1280,height=800,menubar=no,toolbar=no,location=no,status=no');
   if(!remoteWin){alert('Popup wurde blockiert. Bitte den Popup-Blocker für diese Seite deaktivieren.');return;}
   remoteWin.document.open();
+  const isLight=document.body.classList.contains('light');
   remoteWin.document.write(`<!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -5118,17 +5121,20 @@ function openRemoteWindow(){
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#0d1117;color:#fff;font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
-.rd-header{background:#161b27;border-bottom:2px solid #f97316;padding:12px 28px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10}
-.rd-logo{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:3px;color:#f97316}
-.rd-view{font-size:.75rem;letter-spacing:2px;color:#555;text-transform:uppercase;margin-left:10px}
+:root{--bg:#0a0c10;--surface:#12151c;--surface2:#1a1f2b;--border:#252d3d;--accent:#f97316;--text:#e8eaf0;--muted:#6b7280;--win:#22c55e;--loss:#ef4444;--draw:#eab308;}
+body.light{--bg:#f0f2f7;--surface:#fff;--surface2:#e8ecf4;--border:#d0d7e6;--text:#1a202c;--muted:#8896aa;--win:#16a34a;--loss:#dc2626;--draw:#ca8a04;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;transition:background .3s,color .3s}
+.rd-header{background:var(--surface);border-bottom:2px solid var(--accent);padding:12px 28px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10}
+.rd-logo{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:3px;color:var(--accent)}
+.rd-view{font-size:.75rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-left:10px}
 .rd-dots{display:flex;gap:5px;margin-left:auto;align-items:center}
-.rd-dot{width:8px;height:8px;border-radius:50%;background:#333;transition:background .3s}
-.rd-dot.active{background:#f97316}
-.rd-sess{color:#555;font-size:.78rem;margin-left:12px}
+.rd-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:background .3s}
+.rd-dot.active{background:var(--accent)}
+.rd-sess{color:var(--muted);font-size:.78rem;margin-left:12px}
 #rc{min-height:80vh}
 </style>
-</head><body>
+</head><body class="${isLight?'light':''}">`);
+  remoteWin.document.write(`
 <div class="rd-header">
   <div class="rd-logo">📺 REMOTE</div>
   <div class="rd-view" id="rd-view"></div>
@@ -5150,6 +5156,7 @@ function updateRemoteWindow(){
     const rv=remoteWin.document.getElementById('rd-view');
     const rd=remoteWin.document.getElementById('rd-dots');
     const rs=remoteWin.document.getElementById('rd-sess');
+    remoteWin.document.body.classList.toggle('light',document.body.classList.contains('light'));
     if(rc)rc.innerHTML=buildRemoteViewHtml();
     const viewLabels={spielplan:'Spielplan',tabelle:'Tabelle',rangliste:'Rangliste'};
     if(rv)rv.textContent=viewLabels[remoteCurrentView]||'';
