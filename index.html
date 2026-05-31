@@ -5347,6 +5347,101 @@ function _applyRemoteThemeToWin(){
   }
 }
 
+let _remoteEditId=null;
+
+function remoteEditMatch(id){
+  if(!remoteWin||remoteWin.closed)return;
+  _remoteEditId=id;
+  let m=null;
+  if(gameMode==='gruppenzeit'||gameMode==='gruppensaetze'){
+    m=findGroupMatch(id);
+  }else if(gameMode==='zufall'){
+    for(const r of zufallRounds){m=r.matches.find(x=>x.id===id);if(m)break;}
+  }else{
+    outer:for(const r of rounds)for(const s of r){m=s.matches.find(x=>x.id===id);if(m)break outer;}
+  }
+  if(!m)return;
+  const nA=m.teamAId?tname(m.teamAId):(m.aNames?m.aNames.join(' & '):'');
+  const nB=m.teamBId?tname(m.teamBId):(m.bNames?m.bNames.join(' & '):'');
+  try{
+    const ov=remoteWin.document.getElementById('roverlay');
+    if(!ov)return;
+    remoteWin.document.getElementById('ro-na').textContent=nA;
+    remoteWin.document.getElementById('ro-nb').textContent=nB;
+    remoteWin.document.getElementById('ro-field').textContent='Feld '+(m.fieldNum||'?');
+    const rsa=remoteWin.document.getElementById('ro-sa');
+    const rsb=remoteWin.document.getElementById('ro-sb');
+    rsa.value='';rsb.value='';
+    ov.style.display='flex';
+    rsa.focus();
+  }catch(e){_remoteEditId=null;}
+}
+
+function submitRemoteScore(){
+  if(!_remoteEditId||!remoteWin||remoteWin.closed)return;
+  let sa,sb;
+  try{
+    sa=parseInt(remoteWin.document.getElementById('ro-sa').value);
+    sb=parseInt(remoteWin.document.getElementById('ro-sb').value);
+  }catch(e){return;}
+  if(isNaN(sa)||isNaN(sb)||sa<0||sb<0){alert('Bitte gültige Punktzahlen eingeben!');return;}
+  const id=_remoteEditId;
+  closeRemoteOverlay();
+  _applyRemoteScore(id,sa,sb);
+}
+
+function closeRemoteOverlay(){
+  _remoteEditId=null;
+  if(!remoteWin||remoteWin.closed)return;
+  try{
+    const ov=remoteWin.document.getElementById('roverlay');
+    if(ov)ov.style.display='none';
+  }catch(e){}
+}
+
+function _applyRemoteScore(id,sa,sb){
+  if(gameMode==='gruppenzeit'||gameMode==='gruppensaetze'){
+    const m=findGroupMatch(id);
+    if(!m||m.done)return;
+    m.scoreA=sa;m.scoreB=sb;m.done=true;
+    checkPlacementRoundDone();renderMatches();saveSessionState();
+  }else if(gameMode==='zufall'){
+    let found=false;
+    for(const r of zufallRounds){
+      const m=r.matches.find(x=>x.id===id);
+      if(m&&!m.done){
+        m.scoreA=sa;m.scoreB=sb;m.done=true;
+        // Update tracking counters
+        m.a.forEach(a=>m.b.forEach(b=>{
+          if(!zufallOpponentCount[a])zufallOpponentCount[a]={};
+          if(!zufallOpponentCount[b])zufallOpponentCount[b]={};
+          zufallOpponentCount[a][b]=(zufallOpponentCount[a][b]||0)+1;
+          zufallOpponentCount[b][a]=(zufallOpponentCount[b][a]||0)+1;
+        }));
+        [...m.a,...m.b].forEach(pid=>{zufallPlayCount[pid]=(zufallPlayCount[pid]||0)+1;});
+        found=true;break;
+      }
+    }
+    if(found){renderZufallMatches();renderZufallStandings();saveSessionState();}
+  }else{
+    const firstUndoneRi=rounds.findIndex(slots=>!slots.every(s=>s.done&&s.matches.every(m=>m.done)));
+    let found=false;
+    outer:for(let ri=0;ri<rounds.length;ri++){
+      for(const sl of rounds[ri]){
+        const m=sl.matches.find(x=>x.id===id);
+        if(m&&!m.done){
+          if(ri!==firstUndoneRi){alert('Bitte zuerst alle Ergebnisse von Runde '+(firstUndoneRi+1)+' eintragen.');return;}
+          m.scoreA=sa;m.scoreB=sb;m.done=true;
+          if(sl.matches.every(x=>x.done))sl.done=true;
+          found=true;break outer;
+        }
+      }
+    }
+    if(found){renderMatches();if(endspurtActive)checkEndspurtAutoAdvance();renderStandings();saveSessionState();}
+  }
+  updateRemoteWindow();
+}
+
 function updateRemoteControls(){
   const rlTog=document.getElementById('remoteViewRangliste');
   const rlDesc=document.getElementById('remoteRanglisteDesc');
@@ -5407,6 +5502,7 @@ function _buildRemoteGroupMatchCard(m,active){
       </div>`;
     }
   }else{
+    const editBtn=active&&gameMode!=='gruppensaetze'?`<div style="margin-top:10px"><button onclick="window.opener&&window.opener.remoteEditMatch('${m.id}')" style="background:var(--accent);color:#fff;border:none;padding:8px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer;letter-spacing:.5px">✏ Ergebnis</button></div>`:'';
     return `<div style="background:var(--surface2);border:2px solid ${active?'var(--accent)':'var(--border)'};border-radius:14px;padding:22px 18px;text-align:center">
       <div style="font-size:.95rem;letter-spacing:3px;color:var(--accent);margin-bottom:12px;font-family:'Bebas Neue',sans-serif">FELD ${fieldNum}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
@@ -5415,12 +5511,12 @@ function _buildRemoteGroupMatchCard(m,active){
         <span style="font-size:1.5rem;font-weight:700;color:var(--text);flex:1;text-align:left">${nB}</span>
       </div>
       <div style="font-size:.78rem;color:${active?'var(--accent)':'var(--muted)'};letter-spacing:1px">${active?'⏱ Laufend':'Ausstehend'}</div>
-      ${refLine}
+      ${refLine}${editBtn}
     </div>`;
   }
 }
 
-function _buildRemoteMatchCard(nA,nB,fieldNum,done,scoreA,scoreB,active,ref){
+function _buildRemoteMatchCard(nA,nB,fieldNum,done,scoreA,scoreB,active,ref,id){
   const refLine=ref?`<div style="font-size:.78rem;color:#818cf8;letter-spacing:1px;margin-top:5px">🟣 ${esc(ref)}</div>`:'';
   if(done){
     const aW=scoreA>scoreB,draw=scoreA===scoreB;
@@ -5435,6 +5531,7 @@ function _buildRemoteMatchCard(nA,nB,fieldNum,done,scoreA,scoreB,active,ref){
       ${refLine}
     </div>`;
   }else{
+    const editBtn=id&&active?`<div style="margin-top:10px"><button onclick="window.opener&&window.opener.remoteEditMatch('${id}')" style="background:var(--accent);color:#fff;border:none;padding:8px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer;letter-spacing:.5px">✏ Ergebnis</button></div>`:'';
     return `<div style="background:var(--surface2);border:2px solid ${active?'var(--accent)':'var(--border)'};border-radius:14px;padding:22px 18px;text-align:center">
       <div style="font-size:.95rem;letter-spacing:3px;color:var(--accent);margin-bottom:12px;font-family:'Bebas Neue',sans-serif">FELD ${fieldNum}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
@@ -5443,7 +5540,7 @@ function _buildRemoteMatchCard(nA,nB,fieldNum,done,scoreA,scoreB,active,ref){
         <span style="font-size:1.5rem;font-weight:700;color:var(--text);flex:1;text-align:left">${nB}</span>
       </div>
       <div style="font-size:.78rem;color:${active?'var(--accent)':'var(--muted)'};letter-spacing:1px">${active?'⏱ Laufend':'Ausstehend'}</div>
-      ${refLine}
+      ${refLine}${editBtn}
     </div>`;
   }
 }
@@ -5504,7 +5601,7 @@ function buildRemoteSpielplanHtml(){
     }
     round.matches.forEach(m=>{
       const nA=esc(m.aNames.join(' & ')),nB=esc(m.bNames.join(' & '));
-      html+=_buildRemoteMatchCard(nA,nB,m.fieldNum||'?',m.done,m.scoreA,m.scoreB,active,m.officialRef||null);
+      html+=_buildRemoteMatchCard(nA,nB,m.fieldNum||'?',m.done,m.scoreA,m.scoreB,active,m.officialRef||null,m.id);
     });
     return html+'</div>';
   }
@@ -5528,7 +5625,7 @@ function buildRemoteSpielplanHtml(){
     }
     slot.matches.forEach(m=>{
       const nA=esc(tname(m.teamAId)),nB=esc(tname(m.teamBId));
-      html+=_buildRemoteMatchCard(nA,nB,m.fieldNum,m.done,m.scoreA,m.scoreB,firstUndoneRi===ri,m.officialRef||null);
+      html+=_buildRemoteMatchCard(nA,nB,m.fieldNum,m.done,m.scoreA,m.scoreB,firstUndoneRi===ri,m.officialRef||null,m.id);
     });
   });
   return html+'</div>';
@@ -5659,6 +5756,26 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
   <div class="rd-sess" id="rd-sess"></div>
 </div>
 <div id="rc"></div>
+<div id="roverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:2px solid var(--accent);border-radius:18px;padding:32px 28px;min-width:340px;max-width:420px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.6)">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:4px;color:var(--accent);margin-bottom:4px">ERGEBNIS</div>
+    <div id="ro-field" style="font-size:.78rem;letter-spacing:2px;color:var(--muted);margin-bottom:16px;text-transform:uppercase"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;justify-content:center">
+      <span id="ro-na" style="font-size:1.1rem;font-weight:700;flex:1;text-align:right;color:var(--text)"></span>
+      <span style="color:var(--muted);font-size:1rem;flex-shrink:0">vs</span>
+      <span id="ro-nb" style="font-size:1.1rem;font-weight:700;flex:1;text-align:left;color:var(--text)"></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:24px">
+      <input type="number" id="ro-sa" min="0" max="999" placeholder="0" style="width:76px;text-align:center;font-size:1.8rem;font-family:'Bebas Neue',sans-serif;background:var(--surface2);border:2px solid var(--border);border-radius:10px;color:var(--text);padding:10px 6px;outline:none" onkeydown="if(event.key==='Enter')window.opener&&window.opener.submitRemoteScore()">
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--muted)">:</span>
+      <input type="number" id="ro-sb" min="0" max="999" placeholder="0" style="width:76px;text-align:center;font-size:1.8rem;font-family:'Bebas Neue',sans-serif;background:var(--surface2);border:2px solid var(--border);border-radius:10px;color:var(--text);padding:10px 6px;outline:none" onkeydown="if(event.key==='Enter')window.opener&&window.opener.submitRemoteScore()">
+    </div>
+    <div style="display:flex;gap:12px;justify-content:center">
+      <button onclick="window.opener&&window.opener.submitRemoteScore()" style="background:var(--accent);color:#fff;border:none;padding:12px 28px;border-radius:10px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:1rem;cursor:pointer">✓ Bestätigen</button>
+      <button onclick="window.opener&&window.opener.closeRemoteOverlay()" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:12px 20px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.9rem;cursor:pointer">✕ Abbrechen</button>
+    </div>
+  </div>
+</div>
 </body></html>`);
   remoteWin.document.close();
   setTimeout(()=>updateRemoteWindow(),300);
@@ -5860,7 +5977,7 @@ function renderSlotOverview(){
 
         const vIcon=m.tripleWarning?' <span style="font-size:.68rem">⚠</span>':'';
 
-        html+=`<td class="${cellCls}">${dot}${esc(tname(m.teamAId))} – ${esc(tname(m.teamBId))}${score}${vIcon}</td>`;
+        html+=`<td class="${cellCls}">${dot}${esc(tname(m.teamAId))} <span style="color:var(--muted)">vs</span> ${esc(tname(m.teamBId))}${score}${vIcon}</td>`;
 
         if(hasRef){
 
