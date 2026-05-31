@@ -2876,6 +2876,7 @@ function submitZufallScore(matchId,roundIdx){
   match.scoreA=sa;match.scoreB=sb;match.done=true;
   renderZufallMatches();
   renderZufallStandings();
+  updateRemoteWindow();
   saveSessionState();
 }
 
@@ -2885,6 +2886,7 @@ function reopenZufallMatch(matchId,roundIdx){
   match.done=false;match.scoreA=null;match.scoreB=null;
   renderZufallMatches();
   renderZufallStandings();
+  updateRemoteWindow();
   saveSessionState();
 }
 
@@ -5040,15 +5042,66 @@ function restartRemoteRotation(){
   },remoteRotateSec*1000);
 }
 
+function _buildRemoteMatchCard(nA,nB,fieldNum,done,scoreA,scoreB,active){
+  if(done){
+    const aW=scoreA>scoreB,draw=scoreA===scoreB;
+    return `<div style="background:var(--surface2);border:2px solid var(--win);border-radius:14px;padding:22px 18px;text-align:center">
+      <div style="font-size:.95rem;letter-spacing:3px;color:var(--accent);margin-bottom:12px;font-family:'Bebas Neue',sans-serif">FELD ${fieldNum}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+        <span style="font-size:1.5rem;font-weight:700;color:${aW?'var(--win)':draw?'var(--text)':'var(--muted)'};flex:1;text-align:right">${nA}</span>
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:3rem;color:var(--text);padding:0 10px;line-height:1">${scoreA}&thinsp;:&thinsp;${scoreB}</span>
+        <span style="font-size:1.5rem;font-weight:700;color:${!aW&&!draw?'var(--win)':draw?'var(--text)':'var(--muted)'};flex:1;text-align:left">${nB}</span>
+      </div>
+      <div style="font-size:.78rem;color:var(--win);letter-spacing:1px">✓ Fertig</div>
+    </div>`;
+  }else{
+    return `<div style="background:var(--surface2);border:2px solid ${active?'var(--accent)':'var(--border)'};border-radius:14px;padding:22px 18px;text-align:center">
+      <div style="font-size:.95rem;letter-spacing:3px;color:var(--accent);margin-bottom:12px;font-family:'Bebas Neue',sans-serif">FELD ${fieldNum}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+        <span style="font-size:1.5rem;font-weight:700;color:var(--text);flex:1;text-align:right">${nA}</span>
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:2.2rem;color:var(--muted);padding:0 10px;line-height:1">VS</span>
+        <span style="font-size:1.5rem;font-weight:700;color:var(--text);flex:1;text-align:left">${nB}</span>
+      </div>
+      <div style="font-size:.78rem;color:${active?'var(--accent)':'var(--muted)'};letter-spacing:1px">${active?'⏱ Laufend':'Ausstehend'}</div>
+    </div>`;
+  }
+}
+
 function buildRemoteSpielplanHtml(){
-  if(!started||!rounds.length)return '<p style="color:#666;text-align:center;margin-top:80px;font-size:1.4rem">⏳ Kein Turnier aktiv</p>';
+  if(!started)return '<p style="color:#666;text-align:center;margin-top:80px;font-size:1.4rem">⏳ Kein Turnier aktiv</p>';
+
+  if(gameMode==='zufall'){
+    if(!zufallRounds.length)return '<p style="color:#666;text-align:center;margin-top:80px;font-size:1.4rem">⏳ Keine Runden generiert</p>';
+    const firstUndoneRi=zufallRounds.findIndex(r=>!r.matches.every(m=>m.done));
+    const ri=firstUndoneRi>=0?firstUndoneRi:zufallRounds.length-1;
+    const round=zufallRounds[ri];
+    const rDone=round.matches.every(m=>m.done);
+    const active=firstUndoneRi===ri;
+    let html=`<div style="text-align:center;padding:28px 20px 16px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:3.2rem;letter-spacing:5px;color:var(--accent)">RUNDE ${ri+1}</div>
+      <div style="font-size:.95rem;color:${rDone?'var(--win)':'var(--accent)'};letter-spacing:3px;margin-top:6px;font-weight:600">${rDone?'✓ Abgeschlossen':'⏱ Laufend'}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px;padding:0 24px 32px">`;
+    const refCount=refMode==='team'?round.matches.filter(m=>m.officialRef).length:0;
+    const pausePlayers=(round.sittingOut||[]).slice(refCount);
+    if(pausePlayers.length){
+      const names=pausePlayers.map(p=>esc(p.name)).join(', ');
+      html+=`<div style="grid-column:1/-1;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 20px;color:var(--muted);text-align:center">⏸ Pause: ${names}</div>`;
+    }
+    round.matches.forEach(m=>{
+      const nA=esc(m.aNames.join(' & ')),nB=esc(m.bNames.join(' & '));
+      html+=_buildRemoteMatchCard(nA,nB,m.fieldNum||'?',m.done,m.scoreA,m.scoreB,active);
+    });
+    return html+'</div>';
+  }
+
+  if(!rounds.length)return '<p style="color:#666;text-align:center;margin-top:80px;font-size:1.4rem">⏳ Kein Turnier aktiv</p>';
   const firstUndoneRi=rounds.findIndex(slots=>!slots.every(s=>s.done&&s.matches.every(m=>m.done)));
   const ri=firstUndoneRi>=0?firstUndoneRi:rounds.length-1;
   const slots=rounds[ri];
   const isEndspurt=slots.some(s=>s.isEndspurt);
   const rDone=slots.every(s=>s.done&&s.matches.every(m=>m.done));
   const roundLabel=(isEndspurt?'⚡ ENDSPURT — ':'')+'RUNDE '+(ri+1);
-  const statusColor=rDone?'#22c55e':'#f97316';
   let html=`<div style="text-align:center;padding:28px 20px 16px">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:3.2rem;letter-spacing:5px;color:var(--accent)">${roundLabel}</div>
     <div style="font-size:.95rem;color:${rDone?'var(--win)':'var(--accent)'};letter-spacing:3px;margin-top:6px;font-weight:600">${rDone?'✓ Abgeschlossen':'⏱ Laufend'}</div>
@@ -5061,29 +5114,7 @@ function buildRemoteSpielplanHtml(){
     }
     slot.matches.forEach(m=>{
       const nA=esc(tname(m.teamAId)),nB=esc(tname(m.teamBId));
-      if(m.done){
-        const aW=m.scoreA>m.scoreB,draw=m.scoreA===m.scoreB;
-        html+=`<div style="background:var(--surface2);border:2px solid var(--win);border-radius:14px;padding:22px 18px;text-align:center">
-          <div style="font-size:.95rem;letter-spacing:3px;color:var(--accent);margin-bottom:12px;font-family:'Bebas Neue',sans-serif">FELD ${m.fieldNum}</div>
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
-            <span style="font-size:1.5rem;font-weight:700;color:${aW?'var(--win)':draw?'var(--text)':'var(--muted)'};flex:1;text-align:right">${nA}</span>
-            <span style="font-family:'Bebas Neue',sans-serif;font-size:3rem;color:var(--text);padding:0 10px;line-height:1">${m.scoreA}&thinsp;:&thinsp;${m.scoreB}</span>
-            <span style="font-size:1.5rem;font-weight:700;color:${!aW&&!draw?'var(--win)':draw?'var(--text)':'var(--muted)'};flex:1;text-align:left">${nB}</span>
-          </div>
-          <div style="font-size:.78rem;color:var(--win);letter-spacing:1px">✓ Fertig</div>
-        </div>`;
-      }else{
-        const active=firstUndoneRi===ri;
-        html+=`<div style="background:var(--surface2);border:2px solid ${active?'var(--accent)':'var(--border)'};border-radius:14px;padding:22px 18px;text-align:center">
-          <div style="font-size:.95rem;letter-spacing:3px;color:var(--accent);margin-bottom:12px;font-family:'Bebas Neue',sans-serif">FELD ${m.fieldNum}</div>
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
-            <span style="font-size:1.5rem;font-weight:700;color:var(--text);flex:1;text-align:right">${nA}</span>
-            <span style="font-family:'Bebas Neue',sans-serif;font-size:2.2rem;color:var(--muted);padding:0 10px;line-height:1">VS</span>
-            <span style="font-size:1.5rem;font-weight:700;color:var(--text);flex:1;text-align:left">${nB}</span>
-          </div>
-          <div style="font-size:.78rem;color:${active?'var(--accent)':'var(--muted)'};letter-spacing:1px">${active?'⏱ Laufend':'Ausstehend'}</div>
-        </div>`;
-      }
+      html+=_buildRemoteMatchCard(nA,nB,m.fieldNum,m.done,m.scoreA,m.scoreB,firstUndoneRi===ri);
     });
   });
   return html+'</div>';
