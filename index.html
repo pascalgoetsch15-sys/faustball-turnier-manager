@@ -1936,6 +1936,8 @@ let gameMode='roundrobin';
 
 let numGroups=2,maxConsecutive=2;
 
+let byePts=0;
+
 let scoring={
 
   rr:{win:2,draw:1,loss:0},
@@ -3018,19 +3020,22 @@ function getZufallStandings(){
   const all=[...zufallMen,...zufallWomen];
   const st={};
   all.forEach(p=>{st[p.id]={id:p.id,name:p.name,gender:p.gender,pts:0,won:0,lost:0,drawn:0,sf:0,sa:0,played:0};});
-  zufallRounds.forEach(r=>r.matches.forEach(m=>{
-    if(!m.done)return;
-    const upd=(ids,sf,sa,res)=>ids.forEach(pid=>{
-      if(!st[pid])return;
-      st[pid].sf+=sf;st[pid].sa+=sa;st[pid].played++;
-      if(res==='w'){st[pid].pts+=scoring.rr.win;st[pid].won++;}
-      else if(res==='l'){st[pid].pts+=scoring.rr.loss;st[pid].lost++;}
-      else{st[pid].pts+=scoring.rr.draw;st[pid].drawn++;}
+  zufallRounds.forEach(r=>{
+    if(byePts>0)(r.sittingOut||[]).forEach(p=>{if(st[p.id])st[p.id].pts+=byePts;});
+    r.matches.forEach(m=>{
+      if(!m.done)return;
+      const upd=(ids,sf,sa,res)=>ids.forEach(pid=>{
+        if(!st[pid])return;
+        st[pid].sf+=sf;st[pid].sa+=sa;st[pid].played++;
+        if(res==='w'){st[pid].pts+=scoring.rr.win;st[pid].won++;}
+        else if(res==='l'){st[pid].pts+=scoring.rr.loss;st[pid].lost++;}
+        else{st[pid].pts+=scoring.rr.draw;st[pid].drawn++;}
+      });
+      if(m.scoreA>m.scoreB){upd(m.a,m.scoreA,m.scoreB,'w');upd(m.b,m.scoreB,m.scoreA,'l');}
+      else if(m.scoreB>m.scoreA){upd(m.a,m.scoreA,m.scoreB,'l');upd(m.b,m.scoreB,m.scoreA,'w');}
+      else{upd(m.a,m.scoreA,m.scoreB,'d');upd(m.b,m.scoreB,m.scoreA,'d');}
     });
-    if(m.scoreA>m.scoreB){upd(m.a,m.scoreA,m.scoreB,'w');upd(m.b,m.scoreB,m.scoreA,'l');}
-    else if(m.scoreB>m.scoreA){upd(m.a,m.scoreA,m.scoreB,'l');upd(m.b,m.scoreB,m.scoreA,'w');}
-    else{upd(m.a,m.scoreA,m.scoreB,'d');upd(m.b,m.scoreB,m.scoreA,'d');}
-  }));
+  });
   return Object.values(st).sort((a,b)=>{
     if(b.pts!==a.pts)return b.pts-a.pts;
     const diff=getDiff(b.sf,b.sa)-getDiff(a.sf,a.sa);
@@ -3096,9 +3101,11 @@ function renderScoringSettings(){
 
       <div class="scoring-item"><label>Niederlage</label><input type="number" min="0" max="99" value="${scoring.rr.loss}" id="sc-rr-loss" oninput="updateScoring()"></div>
 
+      <div class="scoring-item"><label>Aussetzen</label><input type="number" min="0" max="10" value="${byePts}" id="sc-bye" oninput="updateScoring()"></div>
+
     </div>
 
-    <div class="alert alert-info" style="margin-top:12px;margin-bottom:0">Sieg ${scoring.rr.win} · Unentschieden ${scoring.rr.draw}:${scoring.rr.draw} · Niederlage ${scoring.rr.loss} Pkte</div>`;
+    <div class="alert alert-info" style="margin-top:12px;margin-bottom:0">Sieg ${scoring.rr.win} · Unentschieden ${scoring.rr.draw}:${scoring.rr.draw} · Niederlage ${scoring.rr.loss} · Aussetzen ${byePts} Pkte</div>`;
 
   } else if(gameMode==='gruppenzeit'){
 
@@ -3110,9 +3117,11 @@ function renderScoringSettings(){
 
       <div class="scoring-item"><label>Niederlage</label><input type="number" min="0" max="99" value="${scoring.gz.loss}" id="sc-gz-loss" oninput="updateScoring()"></div>
 
+      <div class="scoring-item"><label>Aussetzen</label><input type="number" min="0" max="10" value="${byePts}" id="sc-bye" oninput="updateScoring()"></div>
+
     </div>
 
-    <div class="alert alert-info" style="margin-top:12px;margin-bottom:0">Sieg ${scoring.gz.win} · Unentschieden ${scoring.gz.draw}:${scoring.gz.draw} · Niederlage ${scoring.gz.loss} Pkte</div>`;
+    <div class="alert alert-info" style="margin-top:12px;margin-bottom:0">Sieg ${scoring.gz.win} · Unentschieden ${scoring.gz.draw}:${scoring.gz.draw} · Niederlage ${scoring.gz.loss} · Aussetzen ${byePts} Pkte</div>`;
 
   } else {
 
@@ -3126,6 +3135,8 @@ function renderScoringSettings(){
 
       <div class="scoring-item"><label>Match-Verloren (0 Sätze)</label><input type="number" min="0" max="99" value="${scoring.gs.matchLoss}" id="sc-gs-ml" oninput="updateScoring()"></div>
 
+      <div class="scoring-item"><label>Aussetzen</label><input type="number" min="0" max="10" value="${byePts}" id="sc-bye" oninput="updateScoring()"></div>
+
     </div>`;
 
   }
@@ -3136,7 +3147,9 @@ function updateScoring(){
 
   if(started)return;
 
-  if(gameMode==='roundrobin'){
+  byePts=Math.max(0,Math.min(10,parseInt(document.getElementById('sc-bye')?.value)||0));
+
+  if(gameMode==='roundrobin'||gameMode==='zufall'){
 
     scoring.rr.win=parseInt(document.getElementById('sc-rr-win')?.value)||0;
 
@@ -3657,7 +3670,7 @@ function clearLocalState(){
   numFields=3;opponentCooldown=6;
   gameMode='roundrobin';
   numGroups=2;maxConsecutive=2;
-  scoring={rr:{win:2,draw:1,loss:0},gz:{win:2,draw:1,loss:0},gs:{matchWin:3,matchDraw:1,matchLoss:0,matchNearLoss:1},numSets:3,winSets:2};
+  scoring={rr:{win:2,draw:1,loss:0},gz:{win:2,draw:1,loss:0},gs:{matchWin:3,matchDraw:1,matchLoss:0,matchNearLoss:1},numSets:3,winSets:2};byePts=0;
   rounds=[];currentRound=0;started=false;slotGlobalCounter=0;teamIdCounter=0;officialRefGlobalIdx=0;
   matchHistory={};refHistory={};teamPlayCount={};
   groups=[];groupPhase='group';groupMatches=[];placementRounds=[];
@@ -4710,23 +4723,29 @@ function getStandings(){
 
   teams.forEach(t=>{m[t.id]={id:t.id,name:t.name,pts:0,won:0,lost:0,drawn:0,sf:0,sa:0,played:0};});
 
-  rounds.forEach(r=>r.forEach(sl=>sl.matches.forEach(x=>{
+  rounds.forEach(r=>r.forEach(sl=>{
 
-    if(!x.done)return;
+    if(byePts>0)(sl.pauseTeamIds||[]).forEach(id=>{if(m[id])m[id].pts+=byePts;});
 
-    const a=m[x.teamAId],b=m[x.teamBId];if(!a||!b)return;
+    sl.matches.forEach(x=>{
 
-    a.sf+=x.scoreA||0;a.sa+=x.scoreB||0;a.played++;
+      if(!x.done)return;
 
-    b.sf+=x.scoreB||0;b.sa+=x.scoreA||0;b.played++;
+      const a=m[x.teamAId],b=m[x.teamBId];if(!a||!b)return;
 
-    if(x.scoreA>x.scoreB){a.pts+=scoring.rr.win;a.won++;b.pts+=scoring.rr.loss;b.lost++;}
+      a.sf+=x.scoreA||0;a.sa+=x.scoreB||0;a.played++;
 
-    else if(x.scoreB>x.scoreA){b.pts+=scoring.rr.win;b.won++;a.pts+=scoring.rr.loss;a.lost++;}
+      b.sf+=x.scoreB||0;b.sa+=x.scoreA||0;b.played++;
 
-    else{a.pts+=scoring.rr.draw;b.pts+=scoring.rr.draw;a.drawn++;b.drawn++;}
+      if(x.scoreA>x.scoreB){a.pts+=scoring.rr.win;a.won++;b.pts+=scoring.rr.loss;b.lost++;}
 
-  })));
+      else if(x.scoreB>x.scoreA){b.pts+=scoring.rr.win;b.won++;a.pts+=scoring.rr.loss;a.lost++;}
+
+      else{a.pts+=scoring.rr.draw;b.pts+=scoring.rr.draw;a.drawn++;b.drawn++;}
+
+    });
+
+  }));
 
   return Object.values(m).sort((a,b)=>{
 
@@ -7735,7 +7754,7 @@ function saveSessionState(){
 
     teams,referees,refMode,numFields,opponentCooldown,
 
-    gameMode,numGroups,maxConsecutive,scoring,schochFullCycle,schochOddMode,
+    gameMode,numGroups,maxConsecutive,scoring,byePts,schochFullCycle,schochOddMode,
 
     rounds,currentRound,started,
 
@@ -7778,6 +7797,7 @@ function loadSessionState(st){
   const somd=document.getElementById('schochOddModeDesc');if(somd)somd.textContent=schochOddMode==='bonus'?'Tabellen-Letzter spielt 1× mehr':'Ein Team hat Pause pro Zyklus';
 
   scoring=st.scoring||scoring;
+  byePts=st.byePts||0;
 
   rounds=st.rounds||[];currentRound=st.currentRound||0;started=st.started||false;
 
