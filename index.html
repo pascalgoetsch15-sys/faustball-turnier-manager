@@ -4755,8 +4755,12 @@ function generateRound(isFirst){
       if(done.length>0)pool=[...pool,done[done.length-1].id];
     }
     fullCyclePool=pool;
-    const needed=Math.floor(pool.length/2);
-    if(needed>0&&needed<ef)ef=needed;
+    if(fullCyclePool.length<=1){
+      fullCyclePool=null; // pool zu klein zum Paaren — normale Rundenlogik verwenden
+    } else {
+      const needed=Math.floor(pool.length/2);
+      if(needed>0&&needed<ef)ef=needed;
+    }
   }
 
   if(ef===0){
@@ -4840,7 +4844,7 @@ function generateRound(isFirst){
 
     }));
 
-    rounds.push([{matches,done:false,pauseTeamIds:pause,refTeamIds:refs,officialRefs:[],slotIdx:slotGlobalCounter++}]);
+    rounds.push([{matches,done:matches.length===0,pauseTeamIds:pause,refTeamIds:refs,officialRefs:[],slotIdx:slotGlobalCounter++}]);
 
   } else {
 
@@ -4902,7 +4906,7 @@ function generateRound(isFirst){
 
     }));
 
-    rounds.push([{matches,done:false,pauseTeamIds:pause,refTeamIds:[],officialRefs:orefs,refPauseNames,slotIdx:slotGlobalCounter++,isEndspurt:endspurtActive}]);
+    rounds.push([{matches,done:matches.length===0,pauseTeamIds:pause,refTeamIds:[],officialRefs:orefs,refPauseNames,slotIdx:slotGlobalCounter++,isEndspurt:endspurtActive}]);
 
     slotGlobalCounter+=realPairs.length;
 
@@ -5183,7 +5187,7 @@ function renderMatches(){
 
         '<div class="slot-progress"><div class="slot-progress-fill" style="width:'+Math.round(tot?done/tot*100:100)+'%"></div></div>'+
 
-        '<div class="fields-grid">'+pm.map(m=>rrMatchCard(m,isActive&&!sDone,ri===visibleRounds.length-1)).join('')+'</div></div>';
+        '<div class="fields-grid">'+pm.map(m=>rrMatchCard(m,isActive&&!sDone,ri===firstUndoneRi||(firstUndoneRi<0&&ri===visibleRounds.length-1))).join('')+'</div></div>';
 
     });
 
