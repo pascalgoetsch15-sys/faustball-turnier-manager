@@ -5103,9 +5103,9 @@ function renderMatches(){
 
  
 
-  // Render rounds up to and including the current active round (hide future pre-generated rounds)
   const firstUndoneRi=rounds.findIndex(slots=>!slots.every(s=>s.done&&s.matches.every(m=>m.done)));
-  const visibleRounds=firstUndoneRi>=0?rounds.slice(0,firstUndoneRi+1):rounds;
+  // With schochFullCycle all cycle rounds are pre-generated at once — show them all so upcoming matches are visible
+  const visibleRounds=firstUndoneRi>=0?(schochFullCycle?rounds:rounds.slice(0,firstUndoneRi+1)):rounds;
 
   visibleRounds.forEach((slots,ri)=>{
 
@@ -5380,7 +5380,7 @@ function _buildRemoteGroupMatchCard(m,active){
   const nA=esc(tname(m.teamAId)),nB=esc(tname(m.teamBId));
   const fieldNum=m.fieldNum||'?';
   const _ref=refMode==='team'&&m.refTeamId?tname(m.refTeamId):m.officialRef;
-  const refLine=_ref?`<div style="font-size:.78rem;color:#818cf8;letter-spacing:1px;margin-top:5px">🟣 ${esc(_ref)}</div>`:'';
+  const refLine=_ref?`<div style="font-size:.78rem;color:#818cf8;letter-spacing:1px;margin-top:5px">Schiedsrichter: ${esc(_ref)}</div>`:'';
   if(m.done){
     if(isSaetze){
       let aw=0,bw=0;(m.sets||[]).forEach(([sa,sb])=>{if(sa>sb)aw++;else if(sb>sa)bw++;});
@@ -5424,7 +5424,7 @@ function _buildRemoteGroupMatchCard(m,active){
 }
 
 function _buildRemoteMatchCard(nA,nB,fieldNum,done,scoreA,scoreB,active,ref){
-  const refLine=ref?`<div style="font-size:.78rem;color:#818cf8;letter-spacing:1px;margin-top:5px">🟣 ${esc(ref)}</div>`:'';
+  const refLine=ref?`<div style="font-size:.78rem;color:#818cf8;letter-spacing:1px;margin-top:5px">Schiedsrichter: ${esc(ref)}</div>`:'';
   if(done){
     const aW=scoreA>scoreB,draw=scoreA===scoreB;
     return `<div style="background:var(--surface2);border:2px solid var(--win);border-radius:14px;padding:22px 18px;text-align:center">
