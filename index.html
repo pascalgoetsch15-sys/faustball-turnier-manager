@@ -1615,8 +1615,36 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
   <h2>📺 Remote Desktop</h2>
 
   <div class="card">
-    <h3>Externer Spielplan</h3>
-    <p style="color:var(--muted);font-size:.9rem;margin-bottom:16px">Öffnet ein separates Fenster für einen zweiten Bildschirm oder Projektor. Der Spielplan der aktuellen Runde wird automatisch aktualisiert wenn Ergebnisse eingetragen werden.</p>
+    <h3>Anzeige-Inhalte</h3>
+    <p style="color:var(--muted);font-size:.85rem;margin-bottom:14px">Wähle was im Remote-Fenster angezeigt wird.</p>
+    <div class="settings-row">
+      <div><div class="sr-label">Spielplan</div><div class="sr-desc">Aktuelle Runde mit allen Spielen</div></div>
+      <label class="toggle-sw"><input type="checkbox" id="remoteViewSpielplan" checked onchange="setRemoteView('spielplan',this.checked)"><span class="toggle-track"></span></label>
+    </div>
+    <div class="settings-row">
+      <div><div class="sr-label">Tabelle</div><div class="sr-desc">Punktestand aller Teams</div></div>
+      <label class="toggle-sw"><input type="checkbox" id="remoteViewTabelle" onchange="setRemoteView('tabelle',this.checked)"><span class="toggle-track"></span></label>
+    </div>
+    <div class="settings-row">
+      <div><div class="sr-label">Rangliste</div><div class="sr-desc" id="remoteRanglisteDesc">Verfügbar nach Turnierende</div></div>
+      <label class="toggle-sw"><input type="checkbox" id="remoteViewRangliste" disabled onchange="setRemoteView('rangliste',this.checked)"><span class="toggle-track"></span></label>
+    </div>
+  </div>
+
+  <div class="card" id="remoteRotateCard" style="display:none">
+    <h3>⏱ Rotation</h3>
+    <div class="settings-row">
+      <div><div class="sr-label">Wechsel alle</div><div class="sr-desc">Sekunden zwischen den Ansichten</div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" id="remoteRotateSecInput" min="3" max="300" value="10" style="width:64px;text-align:center;font-size:.9rem;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text)" onchange="setRemoteRotateSec(+this.value)">
+        <span style="color:var(--muted);font-size:.85rem">Sek.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Fenster</h3>
+    <p style="color:var(--muted);font-size:.85rem;margin-bottom:14px">Öffnet ein separates Fenster für einen zweiten Bildschirm oder Projektor. Aktualisiert sich automatisch.</p>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn-primary" onclick="openRemoteWindow()">📺 Fenster öffnen</button>
       <button class="btn-ghost" onclick="updateRemoteWindow()" style="font-size:.85rem">🔄 Manuell aktualisieren</button>
@@ -1935,6 +1963,8 @@ let groupMatches=[],placementRounds=[];
 let tournamentFinished=false,guiScale=3;
 
 let remoteWin=null;
+let remoteViews={spielplan:true,tabelle:false,rangliste:false};
+let remoteRotateSec=10,remoteRotateTimer=null,remoteCurrentView='spielplan';
 
 // Zufall mode state
 let zufallMen=[],zufallWomen=[],zufallSameGender=true;
