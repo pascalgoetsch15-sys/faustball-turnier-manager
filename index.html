@@ -1153,6 +1153,8 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
   <div class="tab tab-rangliste" id="tab-rangliste" data-tab="rangliste" style="display:none">🏆 Rangliste</div>
 
+  <div class="tab" data-tab="remote">📺 Remote</div>
+
 </div>
 
 <!-- SETUP -->
@@ -1606,6 +1608,24 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
  
 
+<!-- REMOTE DESKTOP -->
+
+<div class="view" id="view-remote">
+
+  <h2>📺 Remote Desktop</h2>
+
+  <div class="card">
+    <h3>Externer Spielplan</h3>
+    <p style="color:var(--muted);font-size:.9rem;margin-bottom:16px">Öffnet ein separates Fenster für einen zweiten Bildschirm oder Projektor. Der Spielplan der aktuellen Runde wird automatisch aktualisiert wenn Ergebnisse eingetragen werden.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn-primary" onclick="openRemoteWindow()">📺 Fenster öffnen</button>
+      <button class="btn-ghost" onclick="updateRemoteWindow()" style="font-size:.85rem">🔄 Manuell aktualisieren</button>
+    </div>
+    <div id="remoteStatusMsg" style="margin-top:12px;font-size:.82rem;color:var(--muted)"></div>
+  </div>
+
+</div>
+
 <!-- SETTINGS -->
 
 <div class="view" id="view-settings">
@@ -1913,6 +1933,8 @@ let groups=[],groupPhase='group';
 let groupMatches=[],placementRounds=[];
 
 let tournamentFinished=false,guiScale=3;
+
+let remoteWin=null;
 
 // Zufall mode state
 let zufallMen=[],zufallWomen=[],zufallSameGender=true;
@@ -4900,9 +4922,113 @@ function renderMatches(){
 
   el.innerHTML=html;
 
+  updateRemoteWindow();
+
 }
 
- 
+/* ============================================================
+   REMOTE DESKTOP
+============================================================ */
+
+function buildCurrentRoundHtml(){
+  if(!started||!rounds.length)return '<p style="color:#666;text-align:center;margin-top:80px;font-size:1.4rem">⏳ Kein Turnier aktiv</p>';
+  const firstUndoneRi=rounds.findIndex(slots=>!slots.every(s=>s.done&&s.matches.every(m=>m.done)));
+  const ri=firstUndoneRi>=0?firstUndoneRi:rounds.length-1;
+  const slots=rounds[ri];
+  const isEndspurt=slots.some(s=>s.isEndspurt);
+  const rDone=slots.every(s=>s.done&&s.matches.every(m=>m.done));
+  const roundLabel=(isEndspurt?'⚡ ENDSPURT — ':'')+'RUNDE '+(ri+1);
+  const statusLabel=rDone?'✓ Abgeschlossen':'⏱ Laufend';
+  const statusColor=rDone?'#22c55e':'#f97316';
+  let html=`<div style="text-align:center;padding:28px 20px 16px">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:3.2rem;letter-spacing:5px;color:#f97316">${roundLabel}</div>
+    <div style="font-size:.95rem;color:${statusColor};letter-spacing:3px;margin-top:6px;font-weight:600">${statusLabel}</div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;padding:0 24px 32px">`;
+  slots.forEach(slot=>{
+    if(slot.pauseTeamIds&&slot.pauseTeamIds.length){
+      const names=slot.pauseTeamIds.map(id=>esc(tname(id))).join(', ');
+      html+=`<div style="grid-column:1/-1;background:#1a1f2e;border:1px solid #2a2f40;border-radius:12px;padding:14px 20px;color:#555;font-size:.95rem;text-align:center">⏸ Pause: ${names}</div>`;
+    }
+    slot.matches.forEach(m=>{
+      const nA=esc(tname(m.teamAId)),nB=esc(tname(m.teamBId));
+      if(m.done){
+        const aW=m.scoreA>m.scoreB,draw=m.scoreA===m.scoreB;
+        html+=`<div style="background:#1a1f2e;border:2px solid #22c55e;border-radius:14px;padding:22px 18px;text-align:center">
+          <div style="font-size:.65rem;letter-spacing:3px;color:#f97316;margin-bottom:12px;font-family:'Bebas Neue',sans-serif">FELD ${m.fieldNum}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+            <span style="font-size:1.5rem;font-weight:700;color:${aW?'#22c55e':draw?'#fff':'#444'};flex:1;text-align:right">${nA}</span>
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:3rem;color:#fff;padding:0 10px;line-height:1">${m.scoreA}&thinsp;:&thinsp;${m.scoreB}</span>
+            <span style="font-size:1.5rem;font-weight:700;color:${!aW&&!draw?'#22c55e':draw?'#fff':'#444'};flex:1;text-align:left">${nB}</span>
+          </div>
+          <div style="font-size:.78rem;color:#22c55e;letter-spacing:1px">✓ Fertig</div>
+        </div>`;
+      }else{
+        const active=firstUndoneRi===ri;
+        html+=`<div style="background:#1a1f2e;border:2px solid ${active?'#f97316':'#2a2f40'};border-radius:14px;padding:22px 18px;text-align:center">
+          <div style="font-size:.65rem;letter-spacing:3px;color:#f97316;margin-bottom:12px;font-family:'Bebas Neue',sans-serif">FELD ${m.fieldNum}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+            <span style="font-size:1.5rem;font-weight:700;flex:1;text-align:right">${nA}</span>
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:2.2rem;color:#444;padding:0 10px;line-height:1">VS</span>
+            <span style="font-size:1.5rem;font-weight:700;flex:1;text-align:left">${nB}</span>
+          </div>
+          <div style="font-size:.78rem;color:${active?'#f97316':'#444'};letter-spacing:1px">${active?'⏱ Laufend':'Ausstehend'}</div>
+        </div>`;
+      }
+    });
+  });
+  html+='</div>';
+  return html;
+}
+
+function openRemoteWindow(){
+  if(remoteWin&&!remoteWin.closed){remoteWin.focus();updateRemoteWindow();return;}
+  remoteWin=window.open('','faustball_remote','width=1280,height=800,menubar=no,toolbar=no,location=no,status=no');
+  if(!remoteWin){
+    alert('Popup wurde blockiert. Bitte den Popup-Blocker für diese Seite deaktivieren.');
+    return;
+  }
+  remoteWin.document.open();
+  remoteWin.document.write(`<!DOCTYPE html>
+<html lang="de"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>📺 Spielplan Remote</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;color:#fff;font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+.rd-header{background:#161b27;border-bottom:2px solid #f97316;padding:14px 28px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10}
+.rd-logo{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:3px;color:#f97316}
+.rd-sess{color:#888;font-size:.82rem;margin-left:auto}
+#rc{min-height:80vh}
+</style>
+</head><body>
+<div class="rd-header">
+  <div class="rd-logo">📺 SPIELPLAN REMOTE</div>
+  <div class="rd-sess" id="rd-sess"></div>
+</div>
+<div id="rc"><p style="color:#444;text-align:center;margin-top:80px;font-size:1.2rem">Verbinde...</p></div>
+</body></html>`);
+  remoteWin.document.close();
+  setTimeout(()=>updateRemoteWindow(),300);
+  const msg=document.getElementById('remoteStatusMsg');
+  if(msg)msg.textContent='Fenster geöffnet — wird bei jedem Ergebnis automatisch aktualisiert.';
+}
+
+function updateRemoteWindow(){
+  if(!remoteWin||remoteWin.closed){
+    remoteWin=null;
+    return;
+  }
+  try{
+    const rc=remoteWin.document.getElementById('rc');
+    const rs=remoteWin.document.getElementById('rd-sess');
+    if(rc)rc.innerHTML=buildCurrentRoundHtml();
+    if(rs)rs.textContent=sessionName||'';
+  }catch(e){remoteWin=null;}
+}
+
+
 
 function reopenMatch(id){
 
