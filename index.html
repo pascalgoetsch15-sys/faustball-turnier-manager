@@ -1968,7 +1968,7 @@ let scoring={
 
   rr:{win:2,draw:1,loss:0},
 
-  gz:{win:2,draw:1,loss:0},
+  gz:{win:2,draw:1,loss:0,nearLoss:1},
 
   gs:{matchWin:3,matchDraw:1,matchLoss:0,matchNearLoss:1},
 
@@ -3149,13 +3149,13 @@ function renderScoringSettings(){
 
       <div class="scoring-item"><label>Unentschieden</label><input type="number" min="0" max="99" value="${scoring.gz.draw}" id="sc-gz-draw" oninput="updateScoring()"></div>
 
-      <div class="scoring-item"><label>Niederlage</label><input type="number" min="0" max="99" value="${scoring.gz.loss}" id="sc-gz-loss" oninput="updateScoring()"></div>
+      <div class="scoring-item"><label>Niederlage (Knapp)</label><input type="number" min="0" max="99" value="${scoring.gz.nearLoss}" id="sc-gz-nl" oninput="updateScoring()"></div>
 
-      <div class="scoring-item"><label>Aussetzen</label><input type="number" min="0" max="10" value="${byePts}" id="sc-bye" oninput="updateScoring()"></div>
+      <div class="scoring-item"><label>Niederlage (0 Pkte)</label><input type="number" min="0" max="99" value="${scoring.gz.loss}" id="sc-gz-loss" oninput="updateScoring()"></div>
 
     </div>
 
-    <div class="alert alert-info" style="margin-top:12px;margin-bottom:0">Sieg ${scoring.gz.win} · Unentschieden ${scoring.gz.draw}:${scoring.gz.draw} · Niederlage ${scoring.gz.loss} · Aussetzen ${byePts} Pkte</div>`;
+    <div class="alert alert-info" style="margin-top:12px;margin-bottom:0">Sieg ${scoring.gz.win} · Unentschieden ${scoring.gz.draw}:${scoring.gz.draw} · Niederlage (knapp) ${scoring.gz.nearLoss} · Niederlage ${scoring.gz.loss} Pkte</div>`;
 
   } else {
 
@@ -3169,9 +3169,9 @@ function renderScoringSettings(){
 
       <div class="scoring-item"><label>Match-Verloren (0 Sätze)</label><input type="number" min="0" max="99" value="${scoring.gs.matchLoss}" id="sc-gs-ml" oninput="updateScoring()"></div>
 
-      <div class="scoring-item"><label>Aussetzen</label><input type="number" min="0" max="10" value="${byePts}" id="sc-bye" oninput="updateScoring()"></div>
+    </div>
 
-    </div>`;
+    <div class="alert alert-info" style="margin-top:12px;margin-bottom:0">Sieg ${scoring.gs.matchWin} · Unentschieden ${scoring.gs.matchDraw}:${scoring.gs.matchDraw} · Verloren knapp ${scoring.gs.matchNearLoss} · Verloren ${scoring.gs.matchLoss} Pkte</div>`;
 
   }
 
@@ -3181,9 +3181,9 @@ function updateScoring(){
 
   if(started)return;
 
-  byePts=Math.max(0,Math.min(10,parseInt(document.getElementById('sc-bye')?.value)||0));
-
   if(gameMode==='roundrobin'||gameMode==='zufall'){
+
+    byePts=Math.max(0,Math.min(10,parseInt(document.getElementById('sc-bye')?.value)||0));
 
     scoring.rr.win=parseInt(document.getElementById('sc-rr-win')?.value)||0;
 
@@ -3196,6 +3196,8 @@ function updateScoring(){
     scoring.gz.win=parseInt(document.getElementById('sc-gz-win')?.value)||0;
 
     scoring.gz.draw=parseInt(document.getElementById('sc-gz-draw')?.value)||0;
+
+    scoring.gz.nearLoss=parseInt(document.getElementById('sc-gz-nl')?.value)||0;
 
     scoring.gz.loss=parseInt(document.getElementById('sc-gz-loss')?.value)||0;
 
@@ -4105,9 +4107,9 @@ function applyMatchResult(a,b,x){
 
     const sc=gameMode==='gruppenzeit'?scoring.gz:scoring.rr;
 
-    if(x.scoreA>x.scoreB){a.pts+=sc.win;a.won++;b.pts+=sc.loss;b.lost++;}
+    if(x.scoreA>x.scoreB){a.pts+=sc.win;a.won++;b.pts+=(sc.nearLoss!==undefined&&x.scoreB>0?sc.nearLoss:sc.loss);b.lost++;}
 
-    else if(x.scoreB>x.scoreA){b.pts+=sc.win;b.won++;a.pts+=sc.loss;a.lost++;}
+    else if(x.scoreB>x.scoreA){b.pts+=sc.win;b.won++;a.pts+=(sc.nearLoss!==undefined&&x.scoreA>0?sc.nearLoss:sc.loss);a.lost++;}
 
     else{a.pts+=sc.draw;b.pts+=sc.draw;a.drawn++;b.drawn++;}
 
@@ -8021,6 +8023,7 @@ function loadSessionState(st){
   const somd=document.getElementById('schochOddModeDesc');if(somd)somd.textContent=schochOddMode==='bonus'?'Tabellen-Letzter spielt 1× mehr':'Ein Team hat Pause pro Zyklus';
 
   scoring=st.scoring||scoring;
+  if(scoring.gz&&scoring.gz.nearLoss===undefined)scoring.gz.nearLoss=1;
   byePts=st.byePts||0;
 
   rounds=st.rounds||[];currentRound=st.currentRound||0;started=st.started||false;
