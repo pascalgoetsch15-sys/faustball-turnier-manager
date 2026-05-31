@@ -3203,17 +3203,23 @@ function updateHeaderBadge(){
 
 ============================================================ */
 
-function changeGroups(d){
-
-  if(started)return;
-
-  numGroups=Math.max(1,Math.min(8,numGroups+d));
+function renderGroupsUI(){
 
   document.getElementById('groupsVal').textContent=numGroups;
 
   document.getElementById('groupsDown').disabled=(numGroups<=1);
 
   document.getElementById('groupsUp').disabled=(numGroups>=8);
+
+}
+
+function changeGroups(d){
+
+  if(started)return;
+
+  numGroups=Math.max(1,Math.min(8,numGroups+d));
+
+  renderGroupsUI();
 
   renderGroupPreview();updateStartCard();
 
@@ -3277,11 +3283,7 @@ function renderMaxConsecUI(){
 
 ============================================================ */
 
-function changeFields(d){
-
-  if(started)return;
-
-  numFields=Math.max(1,Math.min(20,numFields+d));
+function renderFieldsUI(){
 
   document.getElementById('fieldsVal').textContent=numFields;
 
@@ -3290,6 +3292,16 @@ function changeFields(d){
   document.getElementById('fieldsDown').disabled=(numFields<=1);
 
   document.getElementById('fieldsUp').disabled=(numFields>=20);
+
+}
+
+function changeFields(d){
+
+  if(started)return;
+
+  numFields=Math.max(1,Math.min(20,numFields+d));
+
+  renderFieldsUI();
 
   updateStartCard();
 
@@ -7869,7 +7881,7 @@ function refreshAllViews(){
 
   renderTeamList();updateStartCard();updateHeaderBadge();
 
-  renderCooldownUI();renderMaxConsecUI();
+  renderCooldownUI();renderMaxConsecUI();renderFieldsUI();renderGroupsUI();renderScoringSettings();
 
   if(tournamentFinished)document.getElementById('tab-rangliste').style.display='';
 
@@ -7971,19 +7983,9 @@ function stopUserSync(){
 
   drawTimer();
 
-  document.getElementById('fieldsVal').textContent=numFields;
+  renderFieldsUI();
 
-  document.getElementById('fieldsDesc').textContent='Pro Runde bis zu '+numFields+' Felder.';
-
-  document.getElementById('fieldsDown').disabled=(numFields<=1);
-
-  document.getElementById('fieldsUp').disabled=(numFields>=20);
-
-  document.getElementById('groupsVal').textContent=numGroups;
-
-  document.getElementById('groupsDown').disabled=(numGroups<=1);
-
-  document.getElementById('groupsUp').disabled=(numGroups>=8);
+  renderGroupsUI();
 
   // Auth is handled by fbAuth.onAuthStateChanged above
   // Auth screen is visible by default until Firebase resolves
