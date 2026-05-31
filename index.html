@@ -1685,6 +1685,13 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
       </div>
       <div id="remoteBgThemeLabel" style="font-size:.75rem;color:var(--muted);margin-top:6px">Standard</div>
     </div>
+    <div style="margin-top:14px">
+      <div style="font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Anzeigegrösse</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input type="range" id="remoteScaleSlider" min="50" max="200" step="5" value="100" oninput="setRemoteScale(+this.value)" style="flex:1;accent-color:var(--accent)">
+        <span id="remoteScaleLabel" style="font-size:.85rem;color:var(--text);min-width:42px;text-align:right">100%</span>
+      </div>
+    </div>
   </div>
 
   <div class="card" id="remoteRotateCard" style="display:none">
@@ -2026,6 +2033,7 @@ let remoteWin=null;
 let remoteViews={spielplan:true,tabelle:false,rangliste:false};
 let remoteRotateSec=10,remoteRotateTimer=null,remoteCurrentView='spielplan';
 let remoteTheme='dark',remoteBgTheme='standard';
+let remoteScale=100;
 
 // Zufall mode state
 let zufallMen=[],zufallWomen=[],zufallSameGender=true;
@@ -5337,6 +5345,7 @@ function _applyRemoteThemeToWin(){
   if(!remoteWin||remoteWin.closed)return;
   const isLight=remoteTheme==='light';
   remoteWin.document.body.classList.toggle('light',isLight);
+  remoteWin.document.body.style.zoom=remoteScale/100;
   const rs=remoteWin.document.documentElement.style;
   if(!isLight){
     const rbg=_bgThemes[remoteBgTheme]||_bgThemes.standard;
@@ -5347,6 +5356,16 @@ function _applyRemoteThemeToWin(){
   }else{
     ['--bg','--surface','--surface2','--border'].forEach(p=>rs.removeProperty(p));
   }
+}
+
+function setRemoteScale(n){
+  remoteScale=Math.max(50,Math.min(200,n||100));
+  const lbl=document.getElementById('remoteScaleLabel');
+  if(lbl)lbl.textContent=remoteScale+'%';
+  const sl=document.getElementById('remoteScaleSlider');
+  if(sl)sl.value=remoteScale;
+  try{localStorage.setItem('fb_remote_scale',remoteScale);}catch(e){}
+  updateRemoteWindow();
 }
 
 function updateRemoteControls(){
@@ -5533,7 +5552,7 @@ function buildRemoteSpielplanHtml(){
   slotToShow.matches.forEach(m=>{
     const nA=esc(tname(m.teamAId)),nB=esc(tname(m.teamBId));
     const _mref=refMode==='team'&&m.refTeamId?tname(m.refTeamId):m.officialRef;
-    html+=_buildRemoteMatchCard(nA,nB,m.fieldNum,m.done,m.scoreA,m.scoreB,firstUndoneRi===ri,_mref||null);
+    html+=_buildRemoteMatchCard(nA,nB,m.fieldNum,m.done,m.scoreA,m.scoreB,!m.done,_mref||null);
   });
   return html+'</div>';
 }
@@ -8541,6 +8560,7 @@ function stopUserSync(){
   try{const rt=localStorage.getItem('fb_remote_theme');if(rt)setRemoteTheme(rt);else setRemoteTheme('dark');}catch(e){setRemoteTheme('dark');}
 
   try{const rb=localStorage.getItem('fb_remote_bgtheme');if(rb)setRemoteBgTheme(rb);else setRemoteBgTheme('standard');}catch(e){setRemoteBgTheme('standard');}
+  try{const rs2=localStorage.getItem('fb_remote_scale');if(rs2)setRemoteScale(parseInt(rs2));else setRemoteScale(100);}catch(e){setRemoteScale(100);}
 
   try{const pl=localStorage.getItem('fb_printlayout');if(pl)setPrintLayout(pl);else setPrintLayout('standard');}catch(e){setPrintLayout('standard');}
 
