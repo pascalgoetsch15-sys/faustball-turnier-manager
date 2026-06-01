@@ -1569,7 +1569,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
   </div>
 
-  <div class="timer-widget" id="timerWidget" style="display:none">
+  <div class="timer-widget" id="timerWidget">
 
     <div class="timer-row1">
 
@@ -1791,7 +1791,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
       <div><div class="sr-label">Timer anzeigen</div><div class="sr-desc">Spielzeit-Timer im Spielplan-Tab</div></div>
 
-      <label class="toggle-sw"><input type="checkbox" id="timerVisible" onchange="toggleTimerVisible()"><span class="toggle-track"></span></label>
+      <label class="toggle-sw"><input type="checkbox" id="timerVisible" checked onchange="toggleTimerVisible()"><span class="toggle-track"></span></label>
 
     </div>
 
@@ -1799,7 +1799,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
       <div><div class="sr-label">Ton bei Zeitablauf</div><div class="sr-desc">Akustisches Signal (3× Piep)</div></div>
 
-      <label class="toggle-sw"><input type="checkbox" id="timerSound" checked=""><span class="toggle-track"></span></label>
+      <label class="toggle-sw"><input type="checkbox" id="timerSound"><span class="toggle-track"></span></label>
 
     </div>
 
@@ -1807,7 +1807,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
       <div><div class="sr-label">Hochzählen nach Zeit</div><div class="sr-desc">Nachspielzeit nach Ablauf</div></div>
 
-      <label class="toggle-sw"><input type="checkbox" id="timerOvertime" checked=""><span class="toggle-track"></span></label>
+      <label class="toggle-sw"><input type="checkbox" id="timerOvertime"><span class="toggle-track"></span></label>
 
     </div>
 
@@ -1863,17 +1863,17 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
       <div><div class="sr-label">Alle 1× pro Zyklus</div><div class="sr-desc">Nur Teams ohne Spiel kommen dran</div></div>
 
-      <label class="toggle-sw"><input type="checkbox" id="schochFullCycleToggle" onchange="setSchochFullCycle(this.checked)"><span class="toggle-track"></span></label>
+      <label class="toggle-sw"><input type="checkbox" id="schochFullCycleToggle" checked onchange="setSchochFullCycle(this.checked)"><span class="toggle-track"></span></label>
 
     </div>
 
-    <div class="settings-row" id="schochOddModeRow" style="display:none">
+    <div class="settings-row" id="schochOddModeRow">
 
       <div><div class="sr-label">Ungerade Teamanzahl</div><div class="sr-desc" id="schochOddModeDesc">Tabellen-Letzter spielt 1× mehr</div></div>
 
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:.75rem;color:var(--muted)">Pause</span>
-        <label class="toggle-sw"><input type="checkbox" id="schochOddModeToggle" checked onchange="setSchochOddMode(this.checked?'bonus':'pause')"><span class="toggle-track"></span></label>
+        <label class="toggle-sw"><input type="checkbox" id="schochOddModeToggle" onchange="setSchochOddMode(this.checked?'bonus':'pause')"><span class="toggle-track"></span></label>
         <span style="font-size:.75rem;color:var(--muted)">2× spielt</span>
       </div>
 
@@ -2058,7 +2058,7 @@ let diffMode='subtract';
 
 let endspurtBtnMode='rounds';
 
-let schochFullCycle=false,schochOddMode='bonus';
+let schochFullCycle=true,schochOddMode='pause';
 
 let ranglisteCols={spi:true,s:true,u:false,n:false,diff:true,pts:true};
 
