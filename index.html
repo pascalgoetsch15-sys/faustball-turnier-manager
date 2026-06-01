@@ -6098,15 +6098,13 @@ function renderStandingsTable(gs,highlightTop){
 
     <th>#</th><th class="td-name">Team</th><th>Sp</th><th>S</th><th>U</th><th>N</th><th>Pkte</th>
 
-    <th>Sätze</th>
+    <th>Sätze</th><th>Diff</th>
 
   </tr></thead><tbody>`;
 
   gs.forEach((s,i)=>{
 
-    const diffVal=s.satsPts+':'+s.satsAgainst;
-
-    const diffColor='var(--muted)';
+    const satzVal=s.satsPts+':'+s.satsAgainst;
 
     html+=`<tr ${i<highlightTop?'class="row-top"':''}>
 
@@ -6122,7 +6120,9 @@ function renderStandingsTable(gs,highlightTop){
 
       <td class="pts-cell">${s.pts}</td>
 
-      <td style="color:${diffColor}">${diffVal}</td>
+      <td style="color:var(--muted)">${satzVal}</td>
+
+      <td style="color:${diffClr(s.sf,s.sa)}">${fmtDiff(s.sf,s.sa)}</td>
 
     </tr>`;
 
