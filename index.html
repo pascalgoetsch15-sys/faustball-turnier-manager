@@ -5965,88 +5965,78 @@ function renderZufallSlotOverview(){
 function renderGroupMatches(){
 
   const el=document.getElementById('matchesContent');
-
   if(!el)return;
 
+  const isOp=userRole==='admin'||userRole==='operator';
   let html='';
 
+  /* ── GRUPPENPHASE ── */
   html+='<div class="group-stage-section">';
-
   html+='<div class="group-stage-header">Gruppenphase <span class="phase-badge phase-group">Round-Robin</span></div>';
 
   const tripleCount=groupMatches.filter(m=>m.tripleWarning).length;
-
   const b2bCount=groupMatches.filter(m=>m.b2bWarning&&!m.tripleWarning).length;
-
   if(tripleCount>0)html+=`<div class="alert alert-danger" style="margin-bottom:14px">🔴 <b>${tripleCount} Spiel${tripleCount>1?'e':''}</b> konnten nicht ohne Überschreitung des Limits geplant werden.</div>`;
-
   else if(b2bCount>0)html+=`<div class="alert alert-warn" style="margin-bottom:14px">⚠ <b>${b2bCount} Spiel${b2bCount>1?'e':''}</b> direkt hintereinander.</div>`;
 
   if(groups.length>1){
-
-    let legend='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px">';
-
-    legend+='<span style="font-size:.7rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)">Legende:</span>';
-
-    groups.forEach((_,gi)=>{const c=GC[gi%GC.length];legend+=`<span class="group-chip" style="background:${c}22;border-color:${c}66;color:${c}">Gruppe ${String.fromCharCode(65+gi)}</span>`;});
-
-    legend+='</div>';
-
-    html+=legend;
-
+    let leg='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px">';
+    leg+='<span style="font-size:.7rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)">Legende:</span>';
+    groups.forEach((_,gi)=>{const c=GC[gi%GC.length];leg+=`<span class="group-chip" style="background:${c}22;border-color:${c}66;color:${c}">Gruppe ${String.fromCharCode(65+gi)}</span>`;});
+    leg+='</div>';
+    html+=leg;
   }
 
-  html+=renderSlotOverview();
-
-  if(userRole==='user'){html+='</div>';el.innerHTML=html;return;}
-
-  // Determine which time slot is currently active so only those matches show inputs
+  /* Slot-Algorithmus: alle Runden der Reihe nach anzeigen */
   const _gSlotMap={};
   groupMatches.forEach(m=>{const si=m._slotIdx??0;if(!_gSlotMap[si])_gSlotMap[si]=[];_gSlotMap[si].push(m);});
-  const _gFirstActiveSlot=Object.keys(_gSlotMap).sort((a,b)=>+a-+b).find(si=>!_gSlotMap[si].every(m=>m.done));
-  const _gActiveSlotNum=_gFirstActiveSlot!==undefined?+_gFirstActiveSlot:null;
+  const _gSlotKeys=Object.keys(_gSlotMap).map(Number).sort((a,b)=>a-b);
+  // Erste Runde bei der noch nicht alle Spiele fertig sind
+  const _gActiveSlot=_gSlotKeys.find(si=>!_gSlotMap[si].every(m=>m.done));
+  const _gActiveSlotNum=_gActiveSlot!==undefined?_gActiveSlot:null;
 
-  groups.forEach((gTeams,gi)=>{
-
-    const c=GC[gi%GC.length];
-
-    const gm=groupMatches.filter(m=>m.groupIdx===gi);
-
-    const done=gm.filter(m=>m.done).length;
-
-    html+=`<div class="group-block" style="border-color:${c}44">
-
-      <div class="group-block-header">
-
-        <span class="group-label" style="background:${c}22;border-color:${c}66;color:${c}">Gruppe ${String.fromCharCode(65+gi)}</span>
-
-        <span class="badge ${done===gm.length&&gm.length>0?'badge-done':'badge-pending'}">${done}/${gm.length} fertig</span>
-
-      </div>`;
-
-    const gs=getGroupStandings(gi);
-
-    html+=renderStandingsTable(gs,2);
-
-    html+='<div class="fields-grid">'+gm.map(m=>{
-      const isActive=groupPhase==='group'&&_gActiveSlotNum!==null&&(m._slotIdx??0)===_gActiveSlotNum;
-      return groupMatchCard(m,isActive);
-    }).join('')+'</div></div>';
-
+  _gSlotKeys.forEach((si,ri)=>{
+    const sm=_gSlotMap[si];
+    const allDone=sm.every(m=>m.done);
+    const isCurrent=si===_gActiveSlotNum;
+    const badgeClass=allDone?'badge-done':'badge-pending';
+    const badgeText=allDone?'Abgeschlossen':isCurrent?'Laufend':'Ausstehend';
+    html+=`<div class="round-section-title">Runde ${ri+1} <span class="badge ${badgeClass}">${badgeText}</span></div>`;
+    html+='<div class="fields-grid">';
+    sm.forEach(m=>{
+      // Eingabe-Karte nur für die aktive Runde + Operator + Gruppenphase noch läuft
+      html+=groupMatchCard(m, isCurrent&&groupPhase==='group'&&isOp);
+    });
+    html+='</div>';
   });
 
+  /* Gruppen-Tabellen */
+  html+='<div style="margin-top:18px">';
+  if(groups.length>1)html+='<div style="font-size:.78rem;color:var(--muted);margin-bottom:10px;letter-spacing:1px;text-transform:uppercase">Gruppen-Tabellen</div>';
+  groups.forEach((_,gi)=>{
+    const c=GC[gi%GC.length];
+    const gm=groupMatches.filter(m=>m.groupIdx===gi);
+    const done=gm.filter(m=>m.done).length;
+    html+=`<div class="group-block" style="border-color:${c}44;margin-bottom:12px">
+      <div class="group-block-header">
+        <span class="group-label" style="background:${c}22;border-color:${c}66;color:${c}">Gruppe ${String.fromCharCode(65+gi)}</span>
+        <span class="badge ${done===gm.length&&gm.length>0?'badge-done':'badge-pending'}">${done}/${gm.length} fertig</span>
+      </div>`;
+    html+=renderStandingsTable(getGroupStandings(gi),2);
+    html+='</div>';
+  });
   html+='</div>';
 
+  html+='</div>'; // group-stage-section
+
+  /* Aktions-Buttons Gruppenphase */
   if(allGroupMatchesDone()&&groupPhase==='group'){
-
-    if(userRole!=='user')html+='<div class="round-actions"><div class="round-actions-label">Nächste Phase</div><button class="btn-next-round" onclick="startPlacementPhase()">⚡ Kreuzspiele generieren</button><button class="beenden-btn" onclick="finishTournament()">🏁 Turnier beenden</button></div>';
-
-  } else if(!allGroupMatchesDone()&&groupPhase==='group'){
-
-    if(userRole!=='user')html+='<div class="round-actions"><div class="round-actions-label">Turnier-Aktionen</div><button class="beenden-btn" onclick="finishTournament()">🏁 Turnier beenden</button></div>';
-
+    if(isOp)html+='<div class="round-actions"><div class="round-actions-label">Nächste Phase</div><button class="btn-next-round" onclick="startPlacementPhase()">⚡ Kreuzspiele generieren</button><button class="beenden-btn" onclick="finishTournament()">🏁 Turnier beenden</button></div>';
+  } else if(groupPhase==='group'){
+    if(isOp)html+='<div class="round-actions"><div class="round-actions-label">Turnier-Aktionen</div><button class="beenden-btn" onclick="finishTournament()">🏁 Turnier beenden</button></div>';
   }
 
+  /* ── KREUZSPIELE ── */
   if(placementRounds.length>0){
     html+=`<div class="group-stage-section"><div class="group-stage-header">Kreuzspiele <span class="phase-badge phase-place">K.O.-Runde</span></div>`;
     html+=renderPlacementSlotOverview();
@@ -6054,26 +6044,20 @@ function renderGroupMatches(){
     placementRounds.forEach(pr=>{
       if(pr.placeholder)return;
 
-      // PreKo round-robin mini-groups render as group-style with standings
       if(pr.preKo){
         const pgDone=pr.matches.length>0&&pr.matches.every(m=>m.done);
         const pgActive=!pgDone&&!pr.preKoAdvanced;
         html+=`<div class="placement-section" style="border-color:${pgDone?'rgba(34,197,94,.3)':pgActive?'rgba(249,115,22,.3)':'var(--border)'}">`;
         html+=`<div class="placement-title" style="color:${pgDone?'var(--win)':pgActive?'var(--accent)':'var(--text)'}">${pr.label} <span class="badge ${pgDone?'badge-done':'badge-pending'}">${pr.matches.filter(m=>m.done).length}/${pr.matches.length} fertig</span></div>`;
-        if(pr.advanceCount<pr.preKoTeams.length){
-          html+=`<div style="font-size:.79rem;color:var(--muted);margin-bottom:10px">🏆 Top ${pr.advanceCount} kommen weiter ins Hauptfeld</div>`;
-        }
-        const pkStandings=computePreKoStandings(pr.preKoTeams,pr.matches);
-        html+=renderStandingsTable(pkStandings,pr.advanceCount);
-        html+='<div class="fields-grid">'+pr.matches.map(m=>groupMatchCard(m,pgActive&&!m.done)).join('')+'</div>';
+        if(pr.advanceCount<pr.preKoTeams.length)html+=`<div style="font-size:.79rem;color:var(--muted);margin-bottom:10px">🏆 Top ${pr.advanceCount} kommen weiter ins Hauptfeld</div>`;
+        html+=renderStandingsTable(computePreKoStandings(pr.preKoTeams,pr.matches),pr.advanceCount);
+        html+='<div class="fields-grid">'+pr.matches.map(m=>groupMatchCard(m,pgActive&&!m.done&&isOp)).join('')+'</div>';
         html+='</div>';
         return;
       }
 
       const roundDone=pr.matches.length>0&&pr.matches.every(m=>m.done);
       if(roundDone&&!pr.done)pr.done=true;
-
-      // Split matches into numFields-batches; only first undone batch is active
       const prBatches=[];
       for(let i=0;i<pr.matches.length;i+=numFields)prBatches.push(pr.matches.slice(i,i+numFields));
       const firstActiveBatch=!roundDone?prBatches.findIndex(b=>!b.every(m=>m.done)):-1;
@@ -6081,30 +6065,20 @@ function renderGroupMatches(){
 
       html+=`<div class="placement-section" style="border-color:${roundDone?'rgba(34,197,94,.3)':isActive?'rgba(249,115,22,.3)':'var(--border)'}">`;
       html+=`<div class="placement-title" style="color:${roundDone?'var(--win)':isActive?'var(--accent)':'var(--text)'}">${pr.label} <span class="badge ${roundDone?'badge-done':'badge-pending'}">${pr.matches.filter(m=>m.done).length}/${pr.matches.length} fertig</span></div>`;
-
-      if(pr.byeTeams&&pr.byeTeams.length>0){
-        html+=`<div style="font-size:.79rem;color:var(--muted);margin-bottom:10px">🎟 Freilos (direkt weiter): <b>${pr.byeTeams.map(id=>esc(tname(id))).join(', ')}</b></div>`;
-      }
-      if(pr.isSemi&&!pr.consolation){
-        html+='<div class="alert alert-cooldown" style="margin-bottom:12px;font-size:.8rem">🏆 Kreuzspiele: Sieger kommen ins Finale – Verlierer spielen um Platz 3.</div>';
-      }
-
-      html+='<div class="fields-grid">'+pr.matches.map((m,mi)=>{
-        const batchIdx=Math.floor(mi/numFields);
-        return groupMatchCard(m,batchIdx===firstActiveBatch);
-      }).join('')+'</div></div>';
+      if(pr.byeTeams&&pr.byeTeams.length>0)html+=`<div style="font-size:.79rem;color:var(--muted);margin-bottom:10px">🎟 Freilos (direkt weiter): <b>${pr.byeTeams.map(id=>esc(tname(id))).join(', ')}</b></div>`;
+      if(pr.isSemi&&!pr.consolation)html+='<div class="alert alert-cooldown" style="margin-bottom:12px;font-size:.8rem">🏆 Kreuzspiele: Sieger kommen ins Finale – Verlierer spielen um Platz 3.</div>';
+      html+='<div class="fields-grid">'+pr.matches.map((m,mi)=>groupMatchCard(m,isOp&&Math.floor(mi/numFields)===firstActiveBatch)).join('')+'</div></div>';
     });
 
-    // Upcoming round placeholder (only for main bracket)
-    const _krList=placementRounds.filter(pr=>pr.isKnockout&&!pr.consolation);const lastKR=_krList[_krList.length-1];
+    const _krList=placementRounds.filter(pr=>pr.isKnockout&&!pr.consolation);
+    const lastKR=_krList[_krList.length-1];
     if(lastKR&&!lastKR.isFinal&&!lastKR.done){
       const advCount=(lastKR.matches.length)+(lastKR.byeTeams?.length||0);
-      const nextLabel=bracketRoundLabel(Math.floor(advCount/2));
-      html+=`<div class="placement-section" style="opacity:.42;border-style:dashed"><div class="placement-title" style="color:var(--muted)">${nextLabel} — wird nach ${lastKR.label.split('(')[0].trim()} generiert</div></div>`;
+      html+=`<div class="placement-section" style="opacity:.42;border-style:dashed"><div class="placement-title" style="color:var(--muted)">${bracketRoundLabel(Math.floor(advCount/2))} — wird nach ${lastKR.label.split('(')[0].trim()} generiert</div></div>`;
     }
 
     html+='</div>';
-    if(userRole!=='user')html+='<div class="round-actions"><div class="round-actions-label">Turnier-Aktionen</div><button class="beenden-btn" onclick="finishTournament()">🏁 Turnier beenden</button></div>';
+    if(isOp)html+='<div class="round-actions"><div class="round-actions-label">Turnier-Aktionen</div><button class="beenden-btn" onclick="finishTournament()">🏁 Turnier beenden</button></div>';
   }
 
   el.innerHTML=html;
