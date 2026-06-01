@@ -1179,16 +1179,6 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
       </div>
 
-      <div class="mode-card" id="mode-gruppenzeit" onclick="setMode('gruppenzeit')">
-
-        <div class="mc-icon">⏱ 👥</div>
-
-        <div class="mc-name">Gruppen · Zeitwertung</div>
-
-        <div class="mc-desc">Gruppen-Rundenspiele mit Zeitlimit (1 Satz pro Spiel, Timer läuft).</div>
-
-      </div>
-
       <div class="mode-card" id="mode-gruppensaetze" onclick="setMode('gruppensaetze')">
 
         <div class="mc-icon">🎯 👥</div>
@@ -2015,8 +2005,6 @@ let scoring={
 
   rr:{win:2,draw:1,loss:0},
 
-  gz:{win:2,draw:1,loss:0,nearLoss:1},
-
   gs:{matchWin:3,matchDraw:1,matchLoss:0,matchNearLoss:1},
 
   numSets:3,winSets:2
@@ -2573,7 +2561,7 @@ function printView(viewId){
 
 function applyModeCards(m){
 
-  const isGroup=m==='gruppenzeit'||m==='gruppensaetze';
+  const isGroup=m==='gruppensaetze';
 
   const isSaetze=m==='gruppensaetze';
 
@@ -2603,7 +2591,7 @@ function setMode(m){
 
   gameMode=m;
 
-  ['roundrobin','gruppenzeit','gruppensaetze','zufall'].forEach(k=>{
+  ['roundrobin','gruppensaetze','zufall'].forEach(k=>{
 
     const el=document.getElementById('mode-'+k);
 
@@ -3191,22 +3179,6 @@ function renderScoringSettings(){
 
     <div class="alert alert-info" style="margin-top:12px;margin-bottom:0">Sieg ${scoring.rr.win} · Unentschieden ${scoring.rr.draw}:${scoring.rr.draw} · Niederlage ${scoring.rr.loss} · Aussetzen ${byePts} Pkte</div>`;
 
-  } else if(gameMode==='gruppenzeit'){
-
-    el.innerHTML=`<div class="scoring-grid">
-
-      <div class="scoring-item"><label>Sieg</label><input type="number" min="0" max="99" value="${scoring.gz.win}" id="sc-gz-win" oninput="updateScoring()"></div>
-
-      <div class="scoring-item"><label>Unentschieden</label><input type="number" min="0" max="99" value="${scoring.gz.draw}" id="sc-gz-draw" oninput="updateScoring()"></div>
-
-      <div class="scoring-item"><label>Niederlage (Knapp)</label><input type="number" min="0" max="99" value="${scoring.gz.nearLoss}" id="sc-gz-nl" oninput="updateScoring()"></div>
-
-      <div class="scoring-item"><label>Niederlage (0 Pkte)</label><input type="number" min="0" max="99" value="${scoring.gz.loss}" id="sc-gz-loss" oninput="updateScoring()"></div>
-
-    </div>
-
-    <div class="alert alert-info" style="margin-top:12px;margin-bottom:0">Sieg ${scoring.gz.win} · Unentschieden ${scoring.gz.draw}:${scoring.gz.draw} · Niederlage (knapp) ${scoring.gz.nearLoss} · Niederlage ${scoring.gz.loss} Pkte</div>`;
-
   } else {
 
     el.innerHTML=`<div class="scoring-grid">
@@ -3241,16 +3213,6 @@ function updateScoring(){
 
     scoring.rr.loss=parseInt(document.getElementById('sc-rr-loss')?.value)||0;
 
-  } else if(gameMode==='gruppenzeit'){
-
-    scoring.gz.win=parseInt(document.getElementById('sc-gz-win')?.value)||0;
-
-    scoring.gz.draw=parseInt(document.getElementById('sc-gz-draw')?.value)||0;
-
-    scoring.gz.nearLoss=parseInt(document.getElementById('sc-gz-nl')?.value)||0;
-
-    scoring.gz.loss=parseInt(document.getElementById('sc-gz-loss')?.value)||0;
-
   } else {
 
     scoring.gs.matchWin=parseInt(document.getElementById('sc-gs-mw')?.value)||0;
@@ -3273,7 +3235,7 @@ function updateHeaderBadge(){
 
   if(!b)return;
 
-  const labels={roundrobin:'Schoch',gruppenzeit:'Gruppen · Zeitwertung',gruppensaetze:'Gruppen · Satzwertung',zufall:'Zufall'};
+  const labels={roundrobin:'Schoch',gruppensaetze:'Gruppen · Satzwertung',zufall:'Zufall'};
 
   b.textContent=labels[gameMode]||'';
 
@@ -3402,7 +3364,7 @@ function renderGroupPreview(){
 
   if(!el)return;
 
-  const isGroup=gameMode==='gruppenzeit'||gameMode==='gruppensaetze';
+  const isGroup=gameMode==='gruppensaetze';
 
   if(!isGroup){el.innerHTML='';return;}
 
@@ -3714,7 +3676,7 @@ function updateStartCard(){
 
     info.className='alert alert-success';info.style.display='block';
 
-    const isGroup=gameMode==='gruppenzeit'||gameMode==='gruppensaetze';
+    const isGroup=gameMode==='gruppensaetze';
 
     const isZufall=gameMode==='zufall';
 
@@ -3750,7 +3712,7 @@ function updateStartCard(){
 
   }
 
-  const isGroup=gameMode==='gruppenzeit'||gameMode==='gruppensaetze';
+  const isGroup=gameMode==='gruppensaetze';
 
   if(teams.length<2){
 
@@ -3778,7 +3740,7 @@ function updateStartCard(){
 
 function getModeLabel(){
 
-  return{roundrobin:'Schoch',gruppenzeit:'Gruppen · Zeitwertung',gruppensaetze:'Gruppen · Satzwertung',zufall:'Zufall'}[gameMode]||gameMode;
+  return{roundrobin:'Schoch',gruppensaetze:'Gruppen · Satzwertung',zufall:'Zufall'}[gameMode]||gameMode;
 
 }
 
@@ -3820,7 +3782,7 @@ function startTournament(){
 
   }
 
-  const isGroup=gameMode==='gruppenzeit'||gameMode==='gruppensaetze';
+  const isGroup=gameMode==='gruppensaetze';
 
   if(teams.length<2)return;
 
@@ -3853,7 +3815,7 @@ function clearLocalState(){
   numFields=3;opponentCooldown=6;
   gameMode='roundrobin';
   numGroups=2;maxConsecutive=2;groupAdvanceCount=0;oddGroupMode='freilos';
-  scoring={rr:{win:2,draw:1,loss:0},gz:{win:2,draw:1,loss:0,nearLoss:1},gs:{matchWin:3,matchDraw:1,matchLoss:0,matchNearLoss:1},numSets:3,winSets:2};byePts=0;
+  scoring={rr:{win:2,draw:1,loss:0},gs:{matchWin:3,matchDraw:1,matchLoss:0,matchNearLoss:1},numSets:3,winSets:2};byePts=0;
   rounds=[];currentRound=0;started=false;slotGlobalCounter=0;teamIdCounter=0;officialRefGlobalIdx=0;
   matchHistory={};refHistory={};teamPlayCount={};cyclePlayCount={};
   groups=[];groupPhase='group';groupMatches=[];placementRounds=[];
@@ -4191,7 +4153,7 @@ function getGroupStandings(gIdx){
 
 function applyMatchResult(a,b,x){
 
-  if(gameMode==='gruppenzeit'||gameMode==='roundrobin'){
+  if(gameMode==='roundrobin'){
 
     a.sf+=(x.scoreA||0);a.sa+=(x.scoreB||0);
 
@@ -4199,7 +4161,7 @@ function applyMatchResult(a,b,x){
 
     a.played++;b.played++;
 
-    const sc=gameMode==='gruppenzeit'?scoring.gz:scoring.rr;
+    const sc=scoring.rr;
 
     if(x.scoreA>x.scoreB){a.pts+=sc.win;a.won++;b.pts+=(sc.nearLoss!==undefined&&x.scoreB>0?sc.nearLoss:sc.loss);b.lost++;}
 
@@ -5133,7 +5095,7 @@ function renderMatches(){
 
   if(gameMode==='zufall'){renderZufallMatches();return;}
 
-  if(gameMode==='gruppenzeit'||gameMode==='gruppensaetze'){renderGroupMatches();return;}
+  if(gameMode==='gruppensaetze'){renderGroupMatches();return;}
 
  
 
@@ -5509,7 +5471,7 @@ function _buildRemoteMatchCard(nA,nB,fieldNum,done,scoreA,scoreB,active,ref){
 function buildRemoteSpielplanHtml(){
   if(!started)return '<p style="color:#666;text-align:center;margin-top:80px;font-size:1.4rem">⏳ Kein Turnier aktiv</p>';
 
-  if(gameMode==='gruppenzeit'||gameMode==='gruppensaetze'){
+  if(gameMode==='gruppensaetze'){
     // Placement phase: show current active placement round
     if(groupPhase==='placement'&&placementRounds.length){
       const activePR=placementRounds.find(pr=>!pr.placeholder&&pr.matches.length>0&&!pr.done);
@@ -5602,7 +5564,6 @@ function buildRemoteSpielplanHtml(){
 }
 
 function buildRemoteGroupStandingsHtml(){
-  const isZeit=gameMode==='gruppenzeit';
   const cols=Math.min(groups.length,3);
   let html=`<div style="text-align:center;padding:28px 20px 20px">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;letter-spacing:5px;color:#f97316">GRUPPEN-TABELLE</div>
@@ -5620,12 +5581,12 @@ function buildRemoteGroupStandingsHtml(){
           <th style="padding:0 8px;text-align:left">Team</th>
           <th style="padding:0 8px;text-align:center">Sp</th>
           <th style="padding:0 8px;text-align:center">Pkte</th>
-          <th style="padding:0 8px;text-align:center">${isZeit?'Diff':'Sätze'}</th>
+          <th style="padding:0 8px;text-align:center">Sätze</th>
         </tr></thead><tbody>`;
     gs.forEach((s,i)=>{
       const adv=effAdv>0&&i<effAdv;
-      const dv=isZeit?fmtDiff(s.sf,s.sa):(s.satsPts+':'+s.satsAgainst);
-      const dc=isZeit?diffClr(s.sf,s.sa):'var(--muted)';
+      const dv=s.satsPts+':'+s.satsAgainst;
+      const dc='var(--muted)';
       html+=`<tr style="background:${adv?'rgba(34,197,94,.1)':'var(--surface2)'}">
         <td style="padding:10px 8px;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:${adv?'var(--win)':'var(--muted)'};text-align:center;border-radius:8px 0 0 8px">${i+1}</td>
         <td style="padding:10px 8px;font-size:1.05rem;font-weight:700;color:var(--text)">${esc(s.name)}</td>
@@ -5640,7 +5601,7 @@ function buildRemoteGroupStandingsHtml(){
 }
 
 function buildRemoteStandingsHtml(isRangliste){
-  const isGroupMode=gameMode==='gruppenzeit'||gameMode==='gruppensaetze';
+  const isGroupMode=gameMode==='gruppensaetze';
   if(isGroupMode&&!isRangliste)return buildRemoteGroupStandingsHtml();
   const st=isGroupMode?getFinalRangliste():getStandings();
   if(!st.length)return '<p style="color:#666;text-align:center;margin-top:80px;font-size:1.4rem">Keine Daten</p>';
@@ -6009,8 +5970,6 @@ function renderGroupMatches(){
 
   let html='';
 
-  const isZeit=gameMode==='gruppenzeit';
-
   html+='<div class="group-stage-section">';
 
   html+='<div class="group-stage-header">Gruppenphase <span class="phase-badge phase-group">Round-Robin</span></div>';
@@ -6067,7 +6026,7 @@ function renderGroupMatches(){
 
     const gs=getGroupStandings(gi);
 
-    html+=renderStandingsTable(gs,isZeit,2);
+    html+=renderStandingsTable(gs,2);
 
     html+='<div class="fields-grid">'+gm.map(m=>{
       const isActive=groupPhase==='group'&&_gActiveSlotNum!==null&&(m._slotIdx??0)===_gActiveSlotNum;
@@ -6105,7 +6064,7 @@ function renderGroupMatches(){
           html+=`<div style="font-size:.79rem;color:var(--muted);margin-bottom:10px">🏆 Top ${pr.advanceCount} kommen weiter ins Hauptfeld</div>`;
         }
         const pkStandings=computePreKoStandings(pr.preKoTeams,pr.matches);
-        html+=renderStandingsTable(pkStandings,isZeit,pr.advanceCount);
+        html+=renderStandingsTable(pkStandings,pr.advanceCount);
         html+='<div class="fields-grid">'+pr.matches.map(m=>groupMatchCard(m,pgActive&&!m.done)).join('')+'</div>';
         html+='</div>';
         return;
@@ -6154,23 +6113,21 @@ function renderGroupMatches(){
 
  
 
-function renderStandingsTable(gs,isZeit,highlightTop){
+function renderStandingsTable(gs,highlightTop){
 
   let html=`<table class="standings-table" style="margin-bottom:14px"><thead><tr>
 
     <th>#</th><th class="td-name">Team</th><th>Sp</th><th>S</th><th>U</th><th>N</th><th>Pkte</th>
 
-    ${isZeit?'<th>Diff</th>':'<th>Sätze</th>'}
+    <th>Sätze</th>
 
   </tr></thead><tbody>`;
 
   gs.forEach((s,i)=>{
 
-    const satzeStr=s.satsPts+':'+s.satsAgainst;
+    const diffVal=s.satsPts+':'+s.satsAgainst;
 
-    const diffVal=isZeit?fmtDiff(s.sf,s.sa):satzeStr;
-
-    const diffColor=isZeit?diffClr(s.sf,s.sa):'var(--muted)';
+    const diffColor='var(--muted)';
 
     html+=`<tr ${i<highlightTop?'class="row-top"':''}>
 
@@ -6307,8 +6264,6 @@ function groupMatchCard(m,isActive){
 
   const label=m.fieldNum?baseLabel+' · Feld '+m.fieldNum:baseLabel;
 
-  const isZeit=gameMode==='gruppenzeit';
-
   const grpColor=m.groupIdx!=null?GC[m.groupIdx%GC.length]:null;
 
   const chipStyle=grpColor?` style="background:${grpColor}22;border-color:${grpColor}66;color:${grpColor}"`:'';
@@ -6321,7 +6276,7 @@ function groupMatchCard(m,isActive){
 
   if(m.done){
 
-    if(isZeit||(m.phase==='placement'&&gameMode!=='gruppensaetze')){
+    if(m.phase==='placement'&&gameMode!=='gruppensaetze'){
 
       const draw=m.scoreA===m.scoreB,aW=m.scoreA>m.scoreB;
 
@@ -6392,28 +6347,6 @@ ${consecBadge}
       <div class="match-header"><span class="match-team">${esc(nA)}</span><span class="match-vs">VS</span><span class="match-team right">${esc(nB)}</span></div>
 
       <div style="text-align:center;color:var(--muted);font-size:.82rem">Ausstehend</div></div>`;
-
-  }
-
-  if(isZeit){
-
-    return `<div class="match-card${violClass} active-field">${consecBadge}
-
-      <div class="field-chip"${chipStyle}>${esc(label)}</div>${refChipHtml(m)}
-
-      <div class="match-header"><span class="match-team">${esc(nA)}</span><span class="match-vs">VS</span><span class="match-team right">${esc(nB)}</span></div>
-
-      <div class="score-inputs">
-
-        <input type="number" min="0" max="999" id="sa-${m.id}" placeholder="0" style="max-width:70px;text-align:center;font-size:1.2rem;font-family:'Bebas Neue',sans-serif;flex:none">
-
-        <span style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--muted)">:</span>
-
-        <input type="number" min="0" max="999" id="sb-${m.id}" placeholder="0" style="max-width:70px;text-align:center;font-size:1.2rem;font-family:'Bebas Neue',sans-serif;flex:none">
-
-        <button class="btn-primary btn-sm" onclick="submitGroupScoreZeit('${m.id}')">✓</button>
-
-      </div></div>`;
 
   }
 
@@ -6518,22 +6451,6 @@ function submitRRScore(id){
 }
 
  
-
-function submitGroupScoreZeit(id){
-
-  const m=findGroupMatch(id);if(!m)return;
-
-  const sa=parseInt(document.getElementById('sa-'+id)?.value);
-
-  const sb=parseInt(document.getElementById('sb-'+id)?.value);
-
-  if(isNaN(sa)||isNaN(sb)||sa<0||sb<0){alert('Bitte gültige Punktzahlen eingeben!');return;}
-
-  m.scoreA=sa;m.scoreB=sb;m.done=true;
-
-  checkPlacementRoundDone();renderMatches();saveSessionState();
-
-}
 
 function submitGroupScoreSaetze(id){
 
@@ -6760,7 +6677,7 @@ function renderStandings(){
 
   if(!teams.length){el.innerHTML='<div class="empty">Noch kein Turnier gestartet.</div>';return;}
 
-  if(gameMode==='gruppenzeit'||gameMode==='gruppensaetze'){renderGroupStandings();return;}
+  if(gameMode==='gruppensaetze'){renderGroupStandings();return;}
 
   const st=getStandings();
 
@@ -6824,8 +6741,6 @@ function renderGroupStandings(){
 
   if(!el)return;
 
-  const isZeit=gameMode==='gruppenzeit';
-
   let html=`<div class="stat-row">
 
     <div class="stat-box"><div class="val">${numGroups}</div><div class="lbl">Gruppe${numGroups>1?'n':''}</div></div>
@@ -6844,7 +6759,7 @@ function renderGroupStandings(){
 
     html+=`<h3 style="color:${c};margin-bottom:8px;margin-top:16px">Gruppe ${String.fromCharCode(65+gi)}</h3>`;
 
-    html+=renderStandingsTable(gs,isZeit,2);
+    html+=renderStandingsTable(gs,2);
 
   });
 
@@ -8444,7 +8359,7 @@ function loadSessionState(st){
 
   numFields=st.numFields||3;opponentCooldown=st.opponentCooldown||6;
 
-  gameMode=st.gameMode||'roundrobin';numGroups=st.numGroups||2;maxConsecutive=st.maxConsecutive||2;groupAdvanceCount=st.groupAdvanceCount||0;oddGroupMode=st.oddGroupMode||'freilos';
+  gameMode=st.gameMode||'roundrobin';if(gameMode==='gruppenzeit')gameMode='gruppensaetze';numGroups=st.numGroups||2;maxConsecutive=st.maxConsecutive||2;groupAdvanceCount=st.groupAdvanceCount||0;oddGroupMode=st.oddGroupMode||'freilos';
   schochFullCycle=st.schochFullCycle||false;
   schochOddMode=st.schochOddMode||'bonus';
   const sfc=document.getElementById('schochFullCycleToggle');if(sfc)sfc.checked=schochFullCycle;
@@ -8453,7 +8368,6 @@ function loadSessionState(st){
   const somd=document.getElementById('schochOddModeDesc');if(somd)somd.textContent=schochOddMode==='bonus'?'Tabellen-Letzter spielt 1× mehr':'Ein Team hat Pause pro Zyklus';
 
   scoring=st.scoring||scoring;
-  if(scoring.gz&&scoring.gz.nearLoss===undefined)scoring.gz.nearLoss=1;
   byePts=st.byePts||0;
 
   rounds=st.rounds||[];currentRound=st.currentRound||0;started=st.started||false;
@@ -8499,7 +8413,7 @@ function refreshAllViews(){
   // setMode returns early when started=true; restore UI manually
   if(started){
     // Update mode selector highlight
-    ['roundrobin','gruppenzeit','gruppensaetze','zufall'].forEach(k=>{
+    ['roundrobin','gruppensaetze','zufall'].forEach(k=>{
       const el=document.getElementById('mode-'+k);
       if(el)el.classList.toggle('sel',k===gameMode);
     });
