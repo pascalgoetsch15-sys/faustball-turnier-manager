@@ -8352,6 +8352,9 @@ function loadSessionState(st){
 
   scoring=st.scoring||scoring;
   byePts=st.byePts||0;
+  // Toggle und winSets synchronisieren damit alter Bug (winSets=2 bei Toggle=OFF) nicht mehr greift
+  const _wt=document.getElementById('winSatzToggle');
+  if(_wt){_wt.checked=scoring.winSets>0;updateWinSatzUI();}
 
   rounds=st.rounds||[];currentRound=st.currentRound||0;started=st.started||false;
 
