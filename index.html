@@ -5992,6 +5992,8 @@ function renderGroupMatches(){
     html+=leg;
   }
 
+  html+=renderSlotOverview();
+
   /* Slot-Algorithmus: alle Runden der Reihe nach anzeigen */
   const _gSlotMap={};
   groupMatches.forEach(m=>{const si=m._slotIdx??0;if(!_gSlotMap[si])_gSlotMap[si]=[];_gSlotMap[si].push(m);});
