@@ -5486,22 +5486,31 @@ function buildRemoteSpielplanHtml(){
       showPR.matches.forEach(m=>{html+=_buildRemoteGroupMatchCard(m,!m.done&&!prDone);});
       return html+'</div>';
     }
-    // Group phase: show current active slot
+    // Group phase: show current active slot + all upcoming slots
     const slotMap={};
     groupMatches.forEach(m=>{const si=m._slotIdx??0;if(!slotMap[si])slotMap[si]=[];slotMap[si].push(m);});
     const slotKeys=Object.keys(slotMap).map(Number).sort((a,b)=>a-b);
     if(!slotKeys.length)return '<p style="color:#666;text-align:center;margin-top:80px;font-size:1.4rem">⏳ Keine Spiele geplant</p>';
     const activeKey=slotKeys.find(si=>!slotMap[si].every(m=>m.done));
-    const showKey=activeKey!==undefined?activeKey:slotKeys[slotKeys.length-1];
-    const slotMatches=slotMap[showKey];
-    const slotDone=slotMatches.every(m=>m.done);
-    let html=`<div style="text-align:center;padding:28px 20px 16px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:3.2rem;letter-spacing:5px;color:var(--accent)">RUNDE ${showKey+1}</div>
-      <div style="font-size:.95rem;color:${slotDone?'var(--win)':'var(--accent)'};letter-spacing:3px;margin-top:6px;font-weight:600">${slotDone?'✓ Abgeschlossen':'⏱ Laufend'}</div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px;padding:0 24px 32px">`;
-    slotMatches.forEach(m=>{html+=_buildRemoteGroupMatchCard(m,!m.done&&!slotDone);});
-    return html+'</div>';
+    const showFromKey=activeKey!==undefined?activeKey:slotKeys[slotKeys.length-1];
+    // Show the active round and all rounds after it
+    const visibleKeys=slotKeys.filter(si=>si>=showFromKey);
+    let html='';
+    visibleKeys.forEach((si,idx)=>{
+      const sm=slotMap[si];
+      const isDone=sm.every(m=>m.done);
+      const isFirst=idx===0;
+      const roundNum=slotKeys.indexOf(si)+1;
+      const borderTop=idx>0?'border-top:2px solid var(--border);margin-top:8px;':'';
+      html+=`<div style="text-align:center;padding:${isFirst?'28px':'18px'} 20px 16px;${borderTop}">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:${isFirst?'3.2':'2.2'}rem;letter-spacing:5px;color:${isFirst?'var(--accent)':'var(--muted)'}">RUNDE ${roundNum}</div>
+        <div style="font-size:.95rem;color:${isDone?'var(--win)':isFirst?'var(--accent)':'var(--muted)'};letter-spacing:3px;margin-top:6px;font-weight:600">${isDone?'✓ Abgeschlossen':isFirst?'⏱ Laufend':'Ausstehend'}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:${isFirst?18:12}px;padding:0 24px ${idx===visibleKeys.length-1?32:12}px;${isFirst?'':'opacity:.45'}">`;
+      sm.forEach(m=>{html+=_buildRemoteGroupMatchCard(m,isFirst&&!m.done&&!isDone);});
+      html+='</div>';
+    });
+    return html;
   }
 
   if(gameMode==='zufall'){
