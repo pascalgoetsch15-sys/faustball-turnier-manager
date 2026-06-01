@@ -1183,7 +1183,7 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
         <div class="mc-icon">🎯 👥</div>
 
-        <div class="mc-name">Gruppen · Satzwertung</div>
+        <div class="mc-name">Turniermodus</div>
 
         <div class="mc-desc">Gruppen-Rundenspiele mit Satz-Wertung (2+ Sätze, kein Timer).</div>
 
@@ -3235,7 +3235,7 @@ function updateHeaderBadge(){
 
   if(!b)return;
 
-  const labels={roundrobin:'Schoch',gruppensaetze:'Gruppen · Satzwertung',zufall:'Zufall'};
+  const labels={roundrobin:'Schoch',gruppensaetze:'Turniermodus',zufall:'Zufall'};
 
   b.textContent=labels[gameMode]||'';
 
@@ -3740,7 +3740,7 @@ function updateStartCard(){
 
 function getModeLabel(){
 
-  return{roundrobin:'Schoch',gruppensaetze:'Gruppen · Satzwertung',zufall:'Zufall'}[gameMode]||gameMode;
+  return{roundrobin:'Schoch',gruppensaetze:'Turniermodus',zufall:'Zufall'}[gameMode]||gameMode;
 
 }
 
