@@ -1957,6 +1957,14 @@ input:checked + .toggle-track:before{transform:translateX(21px)}
 
     <div class="settings-row">
 
+      <div><div class="sr-label">Einstellungen zurücksetzen</div><div class="sr-desc">Alle Einstellungen auf Standardwerte</div></div>
+
+      <button class="btn-ghost" onclick="resetSchochSettings()">Zurücksetzen</button>
+
+    </div>
+
+    <div class="settings-row">
+
       <div><div class="sr-label">Turnier zurücksetzen</div><div class="sr-desc">Alle Runden und Ergebnisse löschen — Teams bleiben</div></div>
 
       <button class="btn-danger" id="resetTournamentBtn" onclick="resetTournament()">Zurücksetzen</button>
@@ -3894,7 +3902,26 @@ function resetTournament(){
 
 }
 
- 
+function resetSchochSettings(){
+  // Timer
+  const tw=document.getElementById('timerVisible');
+  if(tw){tw.checked=true;document.getElementById('timerWidget').style.display='block';}
+  const ts=document.getElementById('timerSound');if(ts)ts.checked=false;
+  const to=document.getElementById('timerOvertime');if(to)to.checked=false;
+  // Schoch
+  setSchochFullCycle(true);
+  setSchochOddMode('pause');
+  // Endspurt-Button
+  setEndspurtBtnMode('rounds');
+  // Diff-Formel
+  setDiffMode('subtract');
+  // Bestätigung
+  confirmNextRoundSetting=true;
+  const cr=document.getElementById('confirmNextRound');if(cr)cr.checked=true;
+  saveSessionState();
+}
+
+
 
 /* ============================================================
 
