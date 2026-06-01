@@ -2627,19 +2627,15 @@ function setMode(m){
 
 function changeNumSatz(d){
 
-  if(started)return;
-
   scoring.numSets=Math.max(1,Math.min(9,scoring.numSets+d));
 
   if(scoring.winSets>scoring.numSets)scoring.winSets=scoring.numSets;
 
-  updateWinSatzUI();
+  updateWinSatzUI();saveSessionState();
 
 }
 
 function toggleWinSatz(){
-
-  if(started)return;
 
   const en=document.getElementById('winSatzToggle').checked;
 
@@ -2647,7 +2643,7 @@ function toggleWinSatz(){
 
   else{scoring.winSets=scoring.numSets;}
 
-  updateWinSatzUI();
+  updateWinSatzUI();saveSessionState();
 
 }
 
@@ -2667,9 +2663,9 @@ function updateWinSatzUI(){
 
   if(numVal)numVal.textContent=scoring.numSets;
 
-  if(numDown)numDown.disabled=started||scoring.numSets<=1;
+  if(numDown)numDown.disabled=scoring.numSets<=1;
 
-  if(numUp)numUp.disabled=started||scoring.numSets>=9;
+  if(numUp)numUp.disabled=scoring.numSets>=9;
 
   if(enabled){scoring.winSets=scoring.numSets;}else{scoring.winSets=0;}
 
