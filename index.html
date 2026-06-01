@@ -6291,7 +6291,7 @@ function groupMatchCard(m,isActive){
 
       let aw=0,bw=0;(m.sets||[]).forEach(([sa,sb])=>{if(sa>sb)aw++;else if(sb>sa)bw++;});
 
-      const setsHtml=(m.sets||[]).map(([sa,sb],i)=>`<div style="font-size:.78rem;color:var(--muted)">Satz ${i+1}: ${sa}:${sb}</div>`).join('');
+      const setsHtml=(m.sets||[]).map(([sa,sb],i)=>`<span style="font-size:.75rem;color:var(--muted)">S${i+1}: ${sa}:${sb}</span>`).join('<span style="color:var(--border);margin:0 4px">·</span>');
 
       return `<div class="match-card${violClass}">
 
@@ -6307,11 +6307,13 @@ function groupMatchCard(m,isActive){
 
         </div>
 
-        <div style="text-align:center">${setsHtml}
+        <div style="text-align:center">
 
-          <div style="margin-top:7px"><span class="badge badge-done">${aw+':'+bw} Sätze</span></div>
+          <div class="score-display"><span style="${aw>bw?'color:var(--win)':''}">${aw}</span><span class="score-colon">:</span><span style="${bw>aw?'color:var(--win)':''}">${bw}</span></div>
 
-          ${(userRole==='admin'||userRole==='operator')?`<button onclick="reopenGroupMatch('${m.id}')" style="margin-top:8px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer">✏ Ergebnis ändern</button>`:''}
+          <div style="margin-top:4px;margin-bottom:6px">${setsHtml}</div>
+
+          ${(userRole==='admin'||userRole==='operator')?`<button onclick="reopenGroupMatch('${m.id}')" style="margin-top:4px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer">✏ Ergebnis ändern</button>`:''}
 
         </div></div>`;
 
@@ -6429,7 +6431,7 @@ function submitRRScore(id){
 
   if(endspurtActive) checkEndspurtAutoAdvance();
 
-  renderStandings();saveSessionState();
+  renderStandings();updateRemoteWindow();saveSessionState();
 
 }
 
@@ -6517,7 +6519,7 @@ function submitGroupScoreSaetze(id){
 
   m.sets=sets;m.scoreA=totalA;m.scoreB=totalB;m.done=true;
 
-  checkPlacementRoundDone();renderMatches();saveSessionState();
+  checkPlacementRoundDone();renderMatches();updateRemoteWindow();saveSessionState();
 
 }
 
