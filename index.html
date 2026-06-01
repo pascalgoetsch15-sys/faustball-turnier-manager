@@ -2007,7 +2007,7 @@ let scoring={
 
   gs:{matchWin:3,matchDraw:1,matchLoss:0,matchNearLoss:1},
 
-  numSets:3,winSets:2
+  numSets:3,winSets:0
 
 };
 
@@ -2671,7 +2671,7 @@ function updateWinSatzUI(){
 
   if(numUp)numUp.disabled=started||scoring.numSets>=9;
 
-  if(enabled)scoring.winSets=scoring.numSets;
+  if(enabled){scoring.winSets=scoring.numSets;}else{scoring.winSets=0;}
 
   if(!enabled||scoring.winSets===0){
 
@@ -3815,7 +3815,7 @@ function clearLocalState(){
   numFields=3;opponentCooldown=6;
   gameMode='roundrobin';
   numGroups=2;maxConsecutive=2;groupAdvanceCount=0;oddGroupMode='freilos';
-  scoring={rr:{win:2,draw:1,loss:0},gs:{matchWin:3,matchDraw:1,matchLoss:0,matchNearLoss:1},numSets:3,winSets:2};byePts=0;
+  scoring={rr:{win:2,draw:1,loss:0},gs:{matchWin:3,matchDraw:1,matchLoss:0,matchNearLoss:1},numSets:3,winSets:0};byePts=0;
   rounds=[];currentRound=0;started=false;slotGlobalCounter=0;teamIdCounter=0;officialRefGlobalIdx=0;
   matchHistory={};refHistory={};teamPlayCount={};cyclePlayCount={};
   groups=[];groupPhase='group';groupMatches=[];placementRounds=[];
